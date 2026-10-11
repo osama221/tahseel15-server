@@ -68,7 +68,7 @@ async function loadUsers() {
 }
 function can(u, p) { return u.role === 'admin' || !!(u.perms && u.perms[p]); }
 function need(u, p) { if (!can(u, p)) bad('ليس لديك صلاحية لهذا الإجراء', 403); }
-function pub(u) { return { id: u.id, username: u.username, name: u.name, role: u.role, perms: u.perms || {}, active: u.active, mustChange: !!u.mustChange }; }
+function pub(u) { return { id: u.id, username: u.username, name: u.name, role: u.role, perms: u.perms || {}, projs: u.projs || [], active: u.active, mustChange: !!u.mustChange }; }
 async function auth(req) {
   const h = String(req.headers.authorization || ''), t = h.startsWith('Bearer ') ? h.slice(7) : '';
   const [b, s] = t.split('.');
@@ -99,22 +99,37 @@ async function login(b) {
 
 /* ---------- data views ---------- */
 const empty = () => ({ rev: 0, contracts: [], payments: [], followups: [], requests: [], log: [], seq: { pay: 0, fu: 0, req: 0 } });
+const S15 = { id: 's15', name: '15 شقة' }, NEW_PROJECTS = ['pc', 'ph', 'pk', 'i350', 'i389'];
+const PREFIX = { s15: '', pc: 'C-', ph: 'H-', pk: 'PK-', i350: 'I350-', i389: 'I389-' };
+const projects = m => (m.projects && m.projects.length ? m.projects : [S15]);
+const projOf = c => c.proj || 's15';
+// a user may be limited to some projects (empty list = all projects)
+const inScope = (u, c) => u.role === 'admin' || !(u.projs && u.projs.length) || u.projs.includes(projOf(c));
 const pending = (p, cm) => p.st !== 'done' && cm[p.c] && cm[p.c].st === 'active';
 function view(m, u, us) {
   m = m || empty();
-  const T = today(), cm = {}; m.contracts.forEach(c => cm[c.id] = c);
+  const T = today(), cm = {}; m.contracts.forEach(c => { if (inScope(u, c)) cm[c.id] = c; });
   const all = can(u, 'viewAll'), contact = can(u, 'contact'), reqs = can(u, 'requests');
-  let pays = m.payments;
+  let pays = m.payments.filter(p => cm[p.c]);
   if (!all) pays = pays.filter(p => pending(p, cm) && p.due < T);
   const seen = {}; pays.forEach(p => seen[p.c] = 1);
-  const strip = c => { const o = Object.assign({}, c); if (!contact) delete o.phone; if (!reqs) delete o.ptok; return o; };
-  const cons = m.contracts.filter(c => all || seen[c.id]).map(strip);
+  const strip = c => { const o = Object.assign({}, c, { proj: projOf(c) }); if (!contact) delete o.phone; if (!reqs) delete o.ptok; return o; };
+  const cons = m.contracts.filter(c => cm[c.id] && (all || seen[c.id])).map(strip);
   const out = { rev: m.rev, today: T, me: pub(u), empty: !m.contracts.length, contracts: cons, payments: pays,
-    followups: contact || all ? m.followups.filter(f => all || seen[f.c]) : [],
-    requests: reqs ? m.requests : [] };
-  if (reqs && !all) out.cidx = m.contracts.filter(c => c.st === 'active').map(c => ({ id: c.id, client: c.client, unit: c.unit }));
-  if (u.role === 'admin') { out.users = us.users.map(pub); out.log = m.log.slice(-200).reverse(); }
+    projects: projects(m).filter(p => inScope(u, { proj: p.id })),
+    followups: contact || all ? m.followups.filter(f => cm[f.c] && (all || seen[f.c])) : [],
+    requests: reqs ? m.requests.filter(q => cm[q.c]) : [] };
+  if (reqs && !all) out.cidx = m.contracts.filter(c => cm[c.id] && c.st === 'active').map(c => ({ id: c.id, client: c.client, unit: c.unit, proj: projOf(c) }));
+  if (u.role === 'admin') { out.users = us.users.map(pub); out.log = m.log.slice(-200).reverse(); out.canAdd = NEW_PROJECTS.some(id => !projects(m).some(p => p.id === id)); }
   return out;
+}
+
+// App versions before 2.2 do not know about projects or the newer payment types: they keep seeing "15 شقة" only.
+function forClient(m, q) {
+  if (!m || q.get('v')) return m;
+  const keep = new Set(m.contracts.filter(c => projOf(c) === 's15').map(c => c.id));
+  return Object.assign({}, m, { projects: [S15], contracts: m.contracts.filter(c => keep.has(c.id)), payments: m.payments.filter(p => keep.has(p.c)),
+    followups: m.followups.filter(f => keep.has(f.c)), requests: m.requests.filter(x => keep.has(x.c)) });
 }
 
 /* ---------- operations ---------- */
@@ -129,7 +144,7 @@ async function savePhoto(b64, id) {
   await store.putFile(k, buf, jpg ? 'image/jpeg' : 'image/png');
   return k;
 }
-const TYPES = ['dp', 'inst', 'maint'], METH = ['chq', 'trf', 'cash', 'rcpt'], RT = ['finish', 'handover', 'issue'], RS = ['new', 'progress', 'done', 'rejected'];
+const TYPES = ['dp', 'inst', 'maint', 'elev', 'other'], METH = ['chq', 'trf', 'cash', 'rcpt'], RT = ['finish', 'handover', 'issue'], RS = ['new', 'progress', 'done', 'rejected'];
 async function op(u, b) {
   const t = b.t, at = new Date().toISOString(), T = today();
   let doc = null;
@@ -140,8 +155,8 @@ async function op(u, b) {
   }
   const r = await mutate(MAIN, m => {
     m = m || empty();
-    const P = id => m.payments.find(p => p.id === +id) || bad('الدفعة غير موجودة', 404);
-    const C = id => m.contracts.find(c => c.id === id) || bad('العقد غير موجود', 404);
+    const P = id => { const p = m.payments.find(x => x.id === +id) || bad('الدفعة غير موجودة', 404); C(p.c); return p; };
+    const C = id => { const c = m.contracts.find(x => x.id === id) || bad('العقد غير موجود', 404); if (!inScope(u, c)) bad('المشروع ده خارج صلاحياتك', 403); return c; };
     let d = '';
     if (t === 'pay.collect') {
       const p = P(b.id), amt = +b.amt, c = C(p.c);
@@ -168,8 +183,15 @@ async function op(u, b) {
       need(u, 'edit');
       if (!str(b.client)) bad('اسم العميل مطلوب');
       let c;
-      if (b.id) c = C(b.id); else { const n = m.contracts.reduce((a, x) => Math.max(a, parseInt(String(x.id).replace(/\D/g, ''), 10) || 0), 0) + 1; c = { id: 'cn' + String(n).padStart(4, '0'), st: 'active', ptok: rid(12) }; m.contracts.push(c); }
-      Object.assign(c, { client: str(b.client, 120), unit: str(b.unit, 60), phone: str(b.phone, 80), date: isDate(b.date) ? b.date : '', floor: str(b.floor, 30), sales: str(b.sales, 60), broker: str(b.broker, 60), note: str(b.note, 300), value: +b.value || 0, maint: +b.maint || 0 }); clean(c);
+      if (b.id) c = C(b.id);
+      else {
+        const pj = projects(m).find(p => p.id === b.proj) || projects(m)[0];
+        if (!inScope(u, { proj: pj.id })) bad('المشروع ده خارج صلاحياتك', 403);
+        const pre = PREFIX[pj.id] != null ? PREFIX[pj.id] : pj.id.toUpperCase() + '-';
+        const n = m.contracts.filter(x => projOf(x) === pj.id).reduce((a, x) => Math.max(a, parseInt(String(x.id).replace(/^.*cn/i, ''), 10) || 0), 0) + 1;
+        c = { id: pre + 'cn' + String(n).padStart(4, '0'), proj: pj.id, st: 'active', ptok: rid(12) }; m.contracts.push(c);
+      }
+      Object.assign(c, { client: str(b.client, 120), unit: str(b.unit, 60), phone: str(b.phone, 80), date: isDate(b.date) ? b.date : '', floor: str(b.floor, 30), sales: str(b.sales, 60), broker: str(b.broker, 60), note: str(b.note, 300), org: str(b.org, 30), value: +b.value || 0, maint: +b.maint || 0, elev: +b.elev || 0 }); clean(c); if (!c.elev) delete c.elev;
       d = (b.id ? 'تعديل' : 'إضافة') + ' عقد ' + c.client;
     } else if (t === 'con.cancel' || t === 'con.revive') { need(u, 'edit'); const c = C(b.id); if (t === 'con.cancel') { c.st = 'cancelled'; c.cancelDate = T; } else { c.st = 'active'; delete c.cancelDate; } d = (t === 'con.cancel' ? 'فسخ' : 'إعادة تفعيل') + ' عقد ' + c.client; }
     else if (t === 'fu.add') {
@@ -187,6 +209,18 @@ async function op(u, b) {
       if (!RS.includes(b.st)) bad('حالة غير صحيحة');
       Object.assign(q, { st: b.st, reply: str(b.reply, 1000), uat: at, uby: u.name }); clean(q);
       d = 'تحديث طلب #' + q.id + ' إلى ' + b.st;
+    } else if (t === 'addprojects') {
+      if (u.role !== 'admin') bad('للأدمن فقط', 403);
+      const add = require('../data/projects.json'), ids = add.projects.map(p => p.id);
+      if (projects(m).some(p => ids.includes(p.id)) && !b.force) bad('المشاريع دي مضافة بالفعل');
+      m.contracts.forEach(c => { if (!c.proj) c.proj = 's15'; });
+      const old = {}, drop = new Set();
+      m.contracts.forEach(c => { if (ids.includes(c.proj)) { drop.add(c.id); old[c.id] = c.ptok; } });
+      m.contracts = m.contracts.filter(c => !drop.has(c.id)).concat(add.contracts.map(c => Object.assign({}, c, { ptok: old[c.id] || rid(12) })));
+      m.payments = m.payments.filter(p => !drop.has(p.c)).concat(add.payments.map(p => Object.assign({ id: ++m.seq.pay }, p)));
+      m.followups = m.followups.filter(f => !drop.has(f.c)); m.requests = m.requests.filter(q => !drop.has(q.c));
+      m.projects = projects(m).filter(p => !ids.includes(p.id)).concat(add.projects);
+      d = 'إضافة ' + add.projects.length + ' مشاريع: ' + add.contracts.length + ' عقد و' + add.payments.length + ' دفعة';
     } else if (t === 'import') {
       if (u.role !== 'admin') bad('للأدمن فقط', 403);
       if (m.contracts.length && !b.force) bad('الداتابيز فيها بيانات بالفعل');
@@ -214,7 +248,8 @@ async function userOp(u, b) {
     if (b.id) x = us.users.find(z => z.id === b.id) || bad('المستخدم غير موجود', 404);
     else { if (String(b.password || '').length < 6) bad('كلمة السر 6 حروف على الأقل'); x = { id: 'u' + (++us.seq), mustChange: true }; us.users.push(x); }
     const perms = {}; PERMS.forEach(p => { if (b.perms && b.perms[p]) perms[p] = true; });
-    Object.assign(x, { username: name, name: str(b.name, 60) || name, role: b.role === 'admin' ? 'admin' : 'user', perms, active: b.active !== false });
+    Object.assign(x, { username: name, name: str(b.name, 60) || name, role: b.role === 'admin' ? 'admin' : 'user', perms, active: b.active !== false,
+      projs: Array.isArray(b.projs) ? b.projs.map(v => str(v, 20)).filter(Boolean).slice(0, 30) : (x.projs || []) });
     if (b.password) { if (String(b.password).length < 6) bad('كلمة السر 6 حروف على الأقل'); setPw(x, b.password); x.mustChange = x.id !== u.id; }
     if (!us.users.some(z => z.role === 'admin' && z.active)) bad('لازم يفضل أدمن واحد مفعّل على الأقل');
     return { v: us };
@@ -237,7 +272,7 @@ function portal(m, tok) {
   if (!c) bad('الرابط غير صحيح', 404);
   const T = today(), ps = m.payments.filter(p => p.c === c.id).sort((a, b) => a.due < b.due ? -1 : 1);
   const paid = ps.filter(p => p.st === 'done').reduce((a, p) => a + p.amt, 0);
-  return { client: c.client, unit: c.unit, floor: c.floor || '', active: c.st === 'active', value: c.value || 0, maint: c.maint || 0, paid, today: T,
+  return { client: c.client, unit: c.unit, floor: c.floor || '', active: c.st === 'active', value: c.value || 0, maint: (c.maint || 0) + (c.elev || 0), paid, today: T,
     payments: ps.map(p => ({ due: p.due, amt: p.amt, type: p.type, st: p.st === 'done' ? 'done' : (c.st === 'active' && p.due < T ? 'late' : 'due') })),
     requests: m.requests.filter(q => q.c === c.id).map(q => ({ id: q.id, type: q.type, text: q.text, st: q.st, at: q.at, reply: q.reply || '' })).reverse() };
 }
@@ -293,17 +328,22 @@ module.exports = async (req, res) => {
     const { u, us } = await auth(req);
     if (r === 'password') return send(200, await changePw(u, b));
     if (u.mustChange) bad('يجب تغيير كلمة السر أولاً', 428);
-    if (r === 'data') { const m = (await store.read(MAIN)).v; return send(200, view(m, u, us)); }
+    if (r === 'data') {
+      const m = (await store.read(MAIN)).v;
+      // unchanged since the phone's copy (same revision, same day): skip resending the whole dataset
+      if (m && q.get('rev') && +q.get('rev') === m.rev && q.get('day') === today()) return send(200, { same: true, me: pub(u), nusers: us.users.length });
+      return send(200, view(forClient(m, q), u, us));
+    }
     if (r === 'feed') {   // collections recorded by other users since a given time (polled by the phones for notifications)
-      const m = (await store.read(MAIN)).v || empty(), since = q.get('since') || '', cm = {};
+      const m = forClient((await store.read(MAIN)).v, q) || empty(), since = q.get('since') || '', cm = {};
       m.contracts.forEach(c => cm[c.id] = c);
-      const items = !can(u, 'viewAll') ? [] : m.payments.filter(p => p.st === 'done' && p.cat && p.cat > since && p.cby !== u.name)
+      const items = !can(u, 'viewAll') ? [] : m.payments.filter(p => p.st === 'done' && p.cat && p.cat > since && p.cby !== u.name && cm[p.c] && inScope(u, cm[p.c]))
         .map(p => ({ id: p.id, amt: p.amt, by: p.cby || '', at: p.cat, client: (cm[p.c] || {}).client || '', unit: (cm[p.c] || {}).unit || '' }))
         .sort((x, y) => x.at < y.at ? -1 : 1).slice(-20);
       return send(200, { now: new Date().toISOString(), items });
     }
-    if (r === 'op') return send(200, view(await op(u, b), u, us));
-    if (r === 'user') { await userOp(u, b); return send(200, view((await store.read(MAIN)).v, u, await loadUsers())); }
+    if (r === 'op') return send(200, view(forClient(await op(u, b), q), u, us));
+    if (r === 'user') { await userOp(u, b); return send(200, view(forClient((await store.read(MAIN)).v, q), u, await loadUsers())); }
     if (r === 'doc') {
       const k = q.get('k') || '', m = (await store.read(MAIN)).v || empty();
       if (!view(m, u, us).payments.some(p => (p.docs || []).some(d => d.k === k))) bad('غير موجود', 404);

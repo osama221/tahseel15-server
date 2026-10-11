@@ -41,10 +41,10 @@ textarea{height:96px;resize:vertical}
 "use strict";
 var TOK=location.pathname.split('/').filter(Boolean).pop()||'',D=null,TYPE='',MSG='';
 var MON=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-var PT={dp:'مقدم',inst:'قسط',maint:'وديعة صيانة'},PS={done:'تم السداد',late:'متأخر',due:'قادم'};
+var PT={dp:'مقدم',inst:'قسط',maint:'وديعة صيانة',elev:'أسانسير',other:'أخرى'},PS={done:'تم السداد',late:'متأخر',due:'قادم'};
 var RT={finish:'تشطيب الوحدة',handover:'استلام الوحدة',issue:'مشكلة أو شكوى'},RS={new:'تم الاستلام',progress:'جاري التنفيذ',done:'تم',rejected:'مرفوض'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function fd(s){return +s.slice(8,10)+' '+MON[+s.slice(5,7)-1]+' '+s.slice(0,4)}
+function fd(s){if(s.slice(0,4)==='2099')return 'غير محدد';return +s.slice(8,10)+' '+MON[+s.slice(5,7)-1]+' '+s.slice(0,4)}
 function money(n){return '<span class="num">'+Math.round(n||0).toLocaleString('en-US')+'</span>'}
 function api(body){return fetch('/api/client'+(body?'':'?tok='+encodeURIComponent(TOK)),body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'خطأ');return j})})}
 function draw(){
