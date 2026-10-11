@@ -267,10 +267,13 @@ module.exports = async (req, res) => {
     const b = req.method === 'POST' ? await body(req) : {};
     if (r === 'health') {
       const k = 'db/health.json', n = Date.now(); let cas = false;
-      const a = await store.read(k); await store.write(k, { n }, a.etag);
-      const c = await store.read(k);
-      try { await store.write(k, { n: 0 }, a.etag || '"stale"'); } catch (e) { cas = !!e.conflict; }
-      return send(200, { ok: c.v && c.v.n === n, cas, secret: !!SECRET, today: today() });
+      const env = { secret: !!SECRET, admin: !!process.env.ADMIN_INIT_PASSWORD, blob: !!process.env.BLOB_READ_WRITE_TOKEN, today: today() };
+      try {
+        const a = await store.read(k); await store.write(k, { n }, a.etag);
+        const c = await store.read(k);
+        try { await store.write(k, { n: 0 }, a.etag || '"stale"'); } catch (e) { cas = !!e.conflict; }
+        return send(200, Object.assign({ ok: !!(c.v && c.v.n === n), cas }, env));
+      } catch (e) { return send(200, Object.assign({ ok: false, storage: String(e && e.message).slice(0, 200) }, env)); }
     }
     if (r === 'login') return send(200, await login(b));
     if (r === 'client') return send(200, req.method === 'POST' ? await portalAdd(b) : portal((await store.read(MAIN)).v, q.get('tok')));
