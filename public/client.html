@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>خدمة العملاء</title>
+<style>
+:root{--red:#c8102e;--ink:#141414;--mut:#6b6b70;--bg:#f3f3f4;--line:#e6e6e8;--ok:#14804a;--okbg:#e5f5ec;--warn:#b25e00;--warnbg:#fff1dc;--badbg:#fde8eb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif;font-size:15px;line-height:1.55}
+header{background:var(--ink);color:#fff;padding:18px 16px}
+header h1{margin:0;font-size:18px}header p{margin:2px 0 0;color:#b9b9bd;font-size:13px}
+main{max-width:640px;margin:0 auto;padding:14px 14px 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;color:var(--mut);margin:18px 4px 8px}
+.num{direction:ltr;unicode-bidi:isolate;display:inline-block;font-variant-numeric:tabular-nums}
+.g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}
+.g b{display:block;font-size:16px}.g span{font-size:12px;color:var(--mut)}
+.bar{height:8px;border-radius:5px;background:#e9e9eb;overflow:hidden;margin-top:12px}.bar i{display:block;height:100%;background:var(--ok)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}.row small{display:block;color:var(--mut);font-size:12px}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;background:#eee;white-space:nowrap}
+.tag.done{background:var(--okbg);color:var(--ok)}.tag.late,.tag.rejected{background:var(--badbg);color:#a00d24}.tag.new,.tag.progress{background:var(--warnbg);color:var(--warn)}
+.types{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.types button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 4px;font:inherit;font-weight:600;cursor:pointer}
+.types button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+textarea,input{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 12px;font:inherit;margin-top:10px;background:#fff}
+textarea{height:96px;resize:vertical}
+.btn{width:100%;height:48px;border:0;border-radius:12px;background:var(--red);color:#fff;font:inherit;font-weight:700;margin-top:10px;cursor:pointer}
+.btn:disabled{opacity:.5}
+.msg{padding:11px 13px;border-radius:12px;margin-top:10px;font-size:14px}.msg.ok{background:var(--okbg);color:var(--ok)}.msg.err{background:var(--badbg);color:#a00d24}
+.reply{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:6px;font-size:13.5px}
+.cen{text-align:center;color:var(--mut);padding:40px 10px}
+</style>
+</head>
+<body>
+<header><h1 id="hn">خدمة العملاء</h1><p id="hu"></p></header>
+<main id="m"><div class="cen">جاري التحميل…</div></main>
+<script>
+"use strict";
+var TOK=location.pathname.split('/').filter(Boolean).pop()||'',D=null,TYPE='',MSG='';
+var MON=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+var PT={dp:'مقدم',inst:'قسط',maint:'وديعة صيانة'},PS={done:'تم السداد',late:'متأخر',due:'قادم'};
+var RT={finish:'تشطيب الوحدة',handover:'استلام الوحدة',issue:'مشكلة أو شكوى'},RS={new:'تم الاستلام',progress:'جاري التنفيذ',done:'تم',rejected:'مرفوض'};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function fd(s){return +s.slice(8,10)+' '+MON[+s.slice(5,7)-1]+' '+s.slice(0,4)}
+function money(n){return '<span class="num">'+Math.round(n||0).toLocaleString('en-US')+'</span>'}
+function api(body){return fetch('/api/client'+(body?'':'?tok='+encodeURIComponent(TOK)),body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'خطأ');return j})})}
+function draw(){
+  document.getElementById('hn').textContent='أهلاً '+D.client;document.getElementById('hu').textContent='الوحدة '+D.unit+(D.floor?' · الدور '+D.floor:'');
+  var tot=D.value+D.maint,next=D.payments.filter(function(p){return p.st!=='done'})[0],late=D.payments.filter(function(p){return p.st==='late'});
+  var h='<div class="card"><div class="g"><div><b>'+money(tot)+'</b><span>إجمالي التعاقد</span></div><div><b>'+money(D.paid)+'</b><span>المسدَّد</span></div><div><b>'+money(Math.max(0,tot-D.paid))+'</b><span>المتبقي</span></div></div><div class="bar"><i style="width:'+(tot?Math.min(100,D.paid/tot*100):0)+'%"></i></div></div>';
+  if(late.length)h+='<div class="msg err">يوجد '+late.length+' دفعة متأخرة بإجمالي '+money(late.reduce(function(a,p){return a+p.amt},0))+' ج.م — برجاء التواصل مع الشركة.</div>';
+  else if(next)h+='<div class="msg ok">الدفعة القادمة: '+money(next.amt)+' ج.م بتاريخ '+fd(next.due)+'</div>';
+  h+='<h2>طلب جديد</h2><div class="card"><div class="types">'+Object.keys(RT).map(function(k){return '<button class="'+(TYPE===k?'on':'')+'" onclick="TYPE=\''+k+'\';keep();draw()">'+RT[k]+'</button>'}).join('')+'</div>'
+   +'<textarea id="tx" placeholder="اكتب تفاصيل طلبك هنا">'+esc(draw.tx||'')+'</textarea><input id="ph" inputmode="tel" placeholder="رقم للتواصل (اختياري)" value="'+esc(draw.ph||'')+'"><button class="btn" id="sb" onclick="send()">إرسال الطلب</button>'+MSG+'</div>';
+  if(D.requests.length)h+='<h2>طلباتي</h2><div class="card">'+D.requests.map(function(q){return '<div class="row"><div><b>'+RT[q.type]+'</b><small>'+fd(q.at.slice(0,10))+'</small><div>'+esc(q.text)+'</div>'+(q.reply?'<div class="reply"><b>رد الشركة:</b> '+esc(q.reply)+'</div>':'')+'</div><span class="tag '+q.st+'">'+RS[q.st]+'</span></div>'}).join('')+'</div>';
+  h+='<h2>جدول السداد</h2><div class="card">'+D.payments.map(function(p){return '<div class="row"><div><b>'+money(p.amt)+'</b> <small>'+PT[p.type]+' · '+fd(p.due)+'</small></div><span class="tag '+p.st+'">'+PS[p.st]+'</span></div>'}).join('')+'</div>';
+  document.getElementById('m').innerHTML=h;
+}
+function keep(){var a=document.getElementById('tx'),b=document.getElementById('ph');if(a)draw.tx=a.value;if(b)draw.ph=b.value}
+function send(){
+  keep();
+  if(!TYPE){MSG='<div class="msg err">اختر نوع الطلب أولاً</div>';return draw()}
+  if((draw.tx||'').trim().length<3){MSG='<div class="msg err">اكتب تفاصيل الطلب</div>';return draw()}
+  document.getElementById('sb').disabled=true;
+  api({tok:TOK,type:TYPE,text:draw.tx,phone:draw.ph}).then(function(d){D=d;TYPE='';draw.tx='';MSG='<div class="msg ok">تم إرسال طلبك، وسيتم التواصل معك قريباً.</div>';draw()})
+   .catch(function(e){MSG='<div class="msg err">'+esc(e.message)+'</div>';draw()});
+}
+api().then(function(d){D=d;draw()}).catch(function(e){document.getElementById('m').innerHTML='<div class="cen">'+esc(e.message==='Failed to fetch'?'تعذّر الاتصال، حاول مرة أخرى':'الرابط غير صحيح أو انتهت صلاحيته')+'</div>'});
+</script>
+</body>
+</html>

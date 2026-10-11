@@ -1,0 +1,1 @@
+{"rewrites":[{"source":"/api/(.*)","destination":"/api/index?r=$1"},{"source":"/c/(.*)","destination":"/client.html"}],"functions":{"api/index.js":{"maxDuration":30}}}
