@@ -5,11 +5,16 @@ const store = process.env.LOCAL_STORE ? require('../local-store') : blobStore();
 function blobStore() {
   const B = require('@vercel/blob');
   return {
-    async read(path) {
-      let r = null;
+    // forWrite: take the ETag from the store's metadata API. The ETag on a downloaded body can be a weak one
+    // (W/"...") when the response was compressed in transit, and a weak ETag never matches a conditional write.
+    async read(path, forWrite) {
+      let r = null, h = null;
+      const meta = forWrite ? B.head(path).catch(() => null) : null;
       try { r = await B.get(path, { access: 'private', useCache: false }); } catch (e) { if (!(e instanceof B.BlobNotFoundError)) throw e; }
+      if (meta) h = await meta;
       if (!r || r.statusCode !== 200) return { v: null, etag: null };
-      return { v: JSON.parse(await new Response(r.stream).text()), etag: r.blob.etag };
+      const v = JSON.parse(await new Response(r.stream).text());
+      return { v, etag: (h && h.etag) || String(r.blob.etag || '').replace(/^W\//, ''), raw: r.blob.etag };
     },
     async write(path, v, etag) {
       const o = { access: 'private', contentType: 'application/json', addRandomSuffix: false };
@@ -38,11 +43,11 @@ const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
 
 async function mutate(path, fn) {
   for (let i = 0; ; i++) {
-    const { v, etag } = await store.read(path);
+    const { v, etag } = await store.read(path, true);
     const out = await fn(v);
     if (out.skip) return out;
     try { await store.write(path, out.v, etag); return out; }
-    catch (e) { if (!e.conflict || i >= 5) throw e; await new Promise(r => setTimeout(r, 60 * (i + 1) * Math.random())); }
+    catch (e) { if (!e.conflict) throw e; if (i >= 5) bad('السيرفر مشغول، حاول مرة أخرى', 503); await new Promise(r => setTimeout(r, 60 * (i + 1) * Math.random())); }
   }
 }
 
@@ -272,7 +277,15 @@ module.exports = async (req, res) => {
         const a = await store.read(k); await store.write(k, { n }, a.etag);
         const c = await store.read(k);
         try { await store.write(k, { n: 0 }, a.etag || '"stale"'); } catch (e) { cas = !!e.conflict; }
-        return send(200, Object.assign({ ok: !!(c.v && c.v.n === n), cas }, env));
+        // same round trip with a document the size of the real database
+        const kb = 'db/health-big.json', pad = 'تحصيل '.repeat(30000); let big = 'fail', etags = '';
+        try {
+          const b0 = await store.read(kb, true); await store.write(kb, { n, pad }, b0.etag);
+          const b1 = await store.read(kb, true); etags = b1.raw + ' / ' + b1.etag;
+          await store.write(kb, { n: n + 1, pad }, b1.etag);
+          const b2 = await store.read(kb, true); big = b2.v && b2.v.n === n + 1 ? 'ok' : 'stale';
+        } catch (e) { big = 'fail: ' + String(e && e.message).slice(0, 80); }
+        return send(200, Object.assign({ ok: !!(c.v && c.v.n === n), cas, big, etags }, env));
       } catch (e) { return send(200, Object.assign({ ok: false, storage: String(e && e.message).slice(0, 200) }, env)); }
     }
     if (r === 'login') return send(200, await login(b));
