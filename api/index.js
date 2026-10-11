@@ -132,6 +132,41 @@ function forClient(m, q) {
     followups: m.followups.filter(f => keep.has(f.c)), requests: m.requests.filter(x => keep.has(x.c)) });
 }
 
+// Sheet updates prepared on the server. Each is applied once, the next time an admin opens the app.
+const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data/update-pk-20261004.json') }];
+const pendingUpdates = m => !m ? [] : UPDATES.filter(x => !(m.applied || []).includes(x.id) && projects(m).some(p => p.id === x.need));
+// A summary sheet gives only each client's collected total: mark the oldest unpaid instalments as collected until the total matches.
+function settle(m, upd) {
+  let n = 0, sum = 0, cons = 0;
+  const r2 = v => Math.round(v * 100) / 100;
+  for (const it of upd.items) {
+    const ps = m.payments.filter(p => p.c === it.c);
+    let need = r2(it.coll - ps.filter(p => p.st === 'done').reduce((a, p) => a + p.amt, 0));
+    if (need < 1) continue;
+    cons++;
+    for (const p of ps.filter(x => x.st !== 'done').sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : a.id - b.id)) {
+      if (need < 1) break;
+      if (p.amt > need + 0.001) { const rest = Object.assign({}, p, { id: ++m.seq.pay, amt: r2(p.amt - need) }); delete rest.docs; m.payments.push(rest); p.amt = need; }
+      Object.assign(p, { st: 'done', cdate: upd.date, cby: upd.by, note: [p.note, upd.note].filter(Boolean).join(' · ') });
+      need = r2(need - p.amt); n++; sum += p.amt;
+    }
+  }
+  return { n, sum, cons };
+}
+async function applyUpdates() {
+  return (await mutate(MAIN, m => {
+    const todo = pendingUpdates(m);
+    if (!todo.length) return { skip: true, v: m };
+    for (const x of todo) {
+      const upd = x.load(), r = settle(m, upd);
+      m.applied = (m.applied || []).concat(x.id);
+      m.log.push({ at: new Date().toISOString(), by: upd.by, d: 'تحديث ' + x.id + ': ' + r.n + ' قسط اتسجل محصّل لـ ' + r.cons + ' عميل بإجمالي ' + Math.round(r.sum) });
+    }
+    m.rev = (m.rev || 0) + 1;
+    return { v: m };
+  })).v;
+}
+
 /* ---------- operations ---------- */
 function clean(o) { Object.keys(o).forEach(k => { if (o[k] === '' || o[k] == null) delete o[k]; }); return o; }
 async function savePhoto(b64, id) {
@@ -329,7 +364,8 @@ module.exports = async (req, res) => {
     if (r === 'password') return send(200, await changePw(u, b));
     if (u.mustChange) bad('يجب تغيير كلمة السر أولاً', 428);
     if (r === 'data') {
-      const m = (await store.read(MAIN)).v;
+      let m = (await store.read(MAIN)).v;
+      if (u.role === 'admin' && q.get('v') && pendingUpdates(m).length) m = await applyUpdates();
       // unchanged since the phone's copy (same revision, same day): skip resending the whole dataset
       if (m && q.get('rev') && +q.get('rev') === m.rev && q.get('day') === today()) return send(200, { same: true, me: pub(u), nusers: us.users.length });
       return send(200, view(forClient(m, q), u, us));
