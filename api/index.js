@@ -294,6 +294,14 @@ module.exports = async (req, res) => {
     if (r === 'password') return send(200, await changePw(u, b));
     if (u.mustChange) bad('يجب تغيير كلمة السر أولاً', 428);
     if (r === 'data') { const m = (await store.read(MAIN)).v; return send(200, view(m, u, us)); }
+    if (r === 'feed') {   // collections recorded by other users since a given time (polled by the phones for notifications)
+      const m = (await store.read(MAIN)).v || empty(), since = q.get('since') || '', cm = {};
+      m.contracts.forEach(c => cm[c.id] = c);
+      const items = !can(u, 'viewAll') ? [] : m.payments.filter(p => p.st === 'done' && p.cat && p.cat > since && p.cby !== u.name)
+        .map(p => ({ id: p.id, amt: p.amt, by: p.cby || '', at: p.cat, client: (cm[p.c] || {}).client || '', unit: (cm[p.c] || {}).unit || '' }))
+        .sort((x, y) => x.at < y.at ? -1 : 1).slice(-20);
+      return send(200, { now: new Date().toISOString(), items });
+    }
     if (r === 'op') return send(200, view(await op(u, b), u, us));
     if (r === 'user') { await userOp(u, b); return send(200, view((await store.read(MAIN)).v, u, await loadUsers())); }
     if (r === 'doc') {
