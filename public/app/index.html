@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>تحصيلات 15 شقة</title>
+<title>تحصيلات راية</title>
 <style>
 
 :root{--red:#c8102e;--red2:#a00d24;--ink:#141414;--mut:#6b6b70;--bg:#f3f3f4;--card:#fff;--line:#e6e6e8;--ok:#14804a;--okbg:#e5f5ec;--warn:#b25e00;--warnbg:#fff1dc;--badbg:#fde8eb;--blue:#1c5fb8;--bluebg:#e6effb}
@@ -278,7 +278,7 @@ function render(){
 /* ---------- login ---------- */
 var LERR='';
 function vLogin(){
-  return '<div class="login"><div class="lg">15</div><h2>تحصيلات 15 شقة</h2><p>سجّل الدخول بحسابك</p>'
+  return '<div class="login"><div class="lg">R</div><h2>تحصيلات راية</h2><p>سجّل الدخول بحسابك</p>'
    +'<label class="f">اسم المستخدم</label><input class="inp" id="l_u" autocapitalize="none" autocomplete="username">'
    +'<label class="f">كلمة السر</label><input class="inp" id="l_p" type="password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')doLogin()">'
    +(LERR?'<div class="err">'+esc(LERR)+'</div>':'')
@@ -294,7 +294,7 @@ function doLogin(){
 }
 var PWOLD='';
 function vPw(){
-  return '<div class="login"><div class="lg">15</div><h2>تغيير كلمة السر</h2><p>لازم تغيّر كلمة السر قبل ما تكمل</p>'
+  return '<div class="login"><div class="lg">R</div><h2>تغيير كلمة السر</h2><p>لازم تغيّر كلمة السر قبل ما تكمل</p>'
    +(PWOLD?'':'<label class="f">كلمة السر الحالية</label><input class="inp" id="p_o" type="password">')
    +'<label class="f">كلمة السر الجديدة (6 حروف على الأقل)</label><input class="inp" id="p_n" type="password"><label class="f">تأكيد كلمة السر</label><input class="inp" id="p_c" type="password">'
    +(LERR?'<div class="err">'+esc(LERR)+'</div>':'')+'<div class="btns"><button class="btn" onclick="doPw()">حفظ</button></div><div class="btns"><button class="btn g sm" onclick="logout()">خروج</button></div></div>';
@@ -631,7 +631,7 @@ function exportX(){
   DC.forEach(function(c){var s=cstat(c);r2.push([pname(c.proj),c.org||'',c.id,c.unit||'',c.client,c.phone||'',c.value||0,c.maint||0,c.date||'',c.st==='active'?'ساري':cst(c),s.done,s.safe,s.wait,c.sales||'',c.broker||'',c.note||''])});
   var r3=[['العميل','الوحدة','التاريخ','الموظف','الطريقة','النتيجة','وعد بالسداد','ملاحظات']];(D.followups||[]).forEach(function(f){var c=CM[f.c]||{};if(!inSc(c))return;r3.push([c.client||'',c.unit||'',f.at.slice(0,10),f.by,FK[f.kind]||'',f.result,f.promise||'',f.note||''])});
   var r4=[['العميل','الوحدة','التاريخ','النوع','الحالة','المصدر','التفاصيل','الرد']];(D.requests||[]).forEach(function(q){var c=CM[q.c]||{};if(!inSc(c))return;r4.push([c.client||'',c.unit||'',q.at.slice(0,10),RT[q.type],RS[q.st],q.src==='client'?'العميل':(q.by||''),q.text,q.reply||''])});
-  N.exportXlsx('تحصيلات-15-شقة-'+TODAY+'.xlsx',JSON.stringify({sheets:[{name:'الدفعات',rows:r1},{name:'العقود',rows:r2},{name:'المتابعات',rows:r3},{name:'طلبات العملاء',rows:r4}]}));
+  N.exportXlsx('تحصيلات-راية-'+TODAY+'.xlsx',JSON.stringify({sheets:[{name:'الدفعات',rows:r1},{name:'العقود',rows:r2},{name:'المتابعات',rows:r3},{name:'طلبات العملاء',rows:r4}]}));
 }
 window.onNative=function(m){toast(m);render()};
 /* ---------- start ---------- */
