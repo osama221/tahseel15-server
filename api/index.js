@@ -23,6 +23,17 @@ function blobStore() {
       catch (e) { if (e instanceof B.BlobPreconditionFailedError || (!etag && /already exists/i.test(String(e.message)))) { const c = new Error('conflict'); c.conflict = true; throw c; } throw e; }
     },
     async putFile(path, buf, type) { await B.put(path, buf, { access: 'private', contentType: type, addRandomSuffix: false }); },
+    async list(prefix) {
+      const out = []; let cursor;
+      do { const r = await B.list({ prefix, cursor, limit: 1000 }); r.blobs.forEach(b => out.push({ path: b.pathname, size: b.size, at: b.uploadedAt })); cursor = r.hasMore ? r.cursor : null; } while (cursor);
+      return out;
+    },
+    async del(paths) { if (paths.length) await B.del(paths); },
+    async putText(path, text) { await B.put(path, text, { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true }); },
+    async getText(path) {
+      const r = await B.get(path, { access: 'private', useCache: false });
+      return r && r.statusCode === 200 ? await new Response(r.stream).text() : null;
+    },
     async getFile(path) {
       const r = await B.get(path, { access: 'private' });
       if (!r || r.statusCode !== 200) return null;
@@ -301,6 +312,38 @@ async function changePw(u, b) {
   return { token: token(out), me: pub(out) };
 }
 
+/* ---------- backups ---------- */
+// One copy per day (taken by the daily scheduled call, at most once a day), plus copies the admin takes by hand.
+// Daily copies are kept for 30 days; manual and pre-restore copies are kept until deleted.
+const BK = 'db/backups/';
+async function backup(kind) {
+  const day = today(), name = kind ? kind + '-' + new Date().toISOString().replace(/[:.]/g, '-') : day;
+  if (!kind && (await store.list(BK + day + '.json')).length) return { skip: true, name };
+  const m = (await store.read(MAIN)).v, us = (await store.read(USERS)).v;
+  if (!m) return { skip: true };
+  await store.putText(BK + name + '.json', JSON.stringify({ at: new Date().toISOString(), rev: m.rev, main: m, users: us }));
+  if (!kind) {
+    const daily = (await store.list(BK)).filter(b => /\/\d{4}-\d{2}-\d{2}\.json$/.test(b.path)).sort((a, b) => a.path < b.path ? 1 : -1);
+    await store.del(daily.slice(30).map(b => b.path));
+  }
+  return { name };
+}
+async function backups() {
+  return (await store.list(BK)).map(b => ({ name: b.path.slice(BK.length).replace(/\.json$/, ''), size: b.size, at: b.at })).sort((a, b) => String(a.at) < String(b.at) ? 1 : -1);
+}
+async function restore(u, name) {
+  if (u.role !== 'admin') bad('للأدمن فقط', 403);
+  if (!/^[\w.-]+$/.test(name || '')) bad('اسم النسخة غير صحيح');
+  const txt = await store.getText(BK + name + '.json'); if (!txt) bad('النسخة غير موجودة', 404);
+  const snap = JSON.parse(txt);
+  await backup('pre-restore');   // so a restore can itself be undone
+  return (await mutate(MAIN, m => {
+    const v = snap.main; v.rev = ((m && m.rev) || 0) + 1;
+    v.log = (v.log || []).concat({ at: new Date().toISOString(), by: u.name, d: 'استرجاع نسخة احتياطية: ' + name });
+    return { v };
+  })).v;
+}
+
 /* ---------- client portal ---------- */
 function portal(m, tok) {
   const c = tok && tok.length >= 16 && m && m.contracts.find(x => x.ptok === tok);
@@ -359,10 +402,20 @@ module.exports = async (req, res) => {
       } catch (e) { return send(200, Object.assign({ ok: false, storage: String(e && e.message).slice(0, 200) }, env)); }
     }
     if (r === 'login') return send(200, await login(b));
+    if (r === 'backup' && req.method === 'GET') return send(200, await backup());   // daily scheduled call
     if (r === 'client') return send(200, req.method === 'POST' ? await portalAdd(b) : portal((await store.read(MAIN)).v, q.get('tok')));
     const { u, us } = await auth(req);
     if (r === 'password') return send(200, await changePw(u, b));
     if (u.mustChange) bad('يجب تغيير كلمة السر أولاً', 428);
+    if (r === 'backups') { if (u.role !== 'admin') bad('للأدمن فقط', 403); return send(200, { items: await backups() }); }
+    if (r === 'backup') { if (u.role !== 'admin') bad('للأدمن فقط', 403); return send(200, Object.assign(await backup('manual'), { items: await backups() })); }
+    if (r === 'backupfile') {
+      if (u.role !== 'admin') bad('للأدمن فقط', 403);
+      const name = q.get('name') || ''; if (!/^[\w.-]+$/.test(name)) bad('اسم غير صحيح');
+      const txt = await store.getText(BK + name + '.json'); if (!txt) bad('النسخة غير موجودة', 404);
+      res.statusCode = 200; res.setHeader('Content-Type', 'application/json; charset=utf-8'); return res.end(txt);
+    }
+    if (r === 'restore') return send(200, view(forClient(await restore(u, b.name), q), u, us));
     if (r === 'data') {
       let m = (await store.read(MAIN)).v;
       if (u.role === 'admin' && q.get('v') && pendingUpdates(m).length) m = await applyUpdates();

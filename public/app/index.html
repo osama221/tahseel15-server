@@ -373,6 +373,18 @@ function vCol(){
   return h;
 }
 
+
+/* ---------- backups (admin) ---------- */
+function bkSheet(){sheet('النسخ الاحتياطية',function(){return '<div class="note">السيرفر بياخد نسخة كاملة تلقائي كل يوم (بيحتفظ بآخر 30 يوم). تقدر تاخد نسخة دلوقتي، تنزّلها على جهازك، أو ترجع لأي نسخة.</div><div class="btns"><button class="btn k sm" onclick="bkNow()">عمل نسخة دلوقتي</button></div><div id="bkl"><div class="empty">جاري التحميل…</div></div>'},true);bkLoad()}
+function bkLoad(){api('backups').then(function(r){bkDraw(r.items)},function(e){var x=document.getElementById('bkl');if(x)x.innerHTML='<div class="empty">'+esc(e.message)+'</div>'})}
+function bkName(n){var m=/^(\d{4}-\d{2}-\d{2})$/.exec(n);if(m)return 'نسخة يومية · '+fd(m[1]);var t=/(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})/.exec(n)||[];return (n.indexOf('pre-restore')===0?'قبل الاسترجاع':'نسخة يدوية')+(t[1]?' · '+fd(t[1])+' '+t[2]+':'+t[3]+' UTC':'')}
+function bkDraw(items){var x=document.getElementById('bkl');if(!x)return;if(!items.length){x.innerHTML='<div class="empty">لا توجد نسخ بعد — أول نسخة يومية بتتعمل الساعة 4 الفجر</div>';return}
+  x.innerHTML='<div class="list" style="margin-top:12px">'+items.map(function(b){return '<div class="row" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(bkName(b.name))+'</b><small class="num">'+(b.size/1024/1024).toFixed(2)+' MB</small></div><div class="btns" style="margin-top:8px"><button class="btn g sm" onclick="bkGet(\''+esc(b.name)+'\')">تنزيل</button><button class="btn dng sm" onclick="bkRestore(\''+esc(b.name)+'\')">استرجاع</button></div></div>'}).join('')+'</div>'}
+function bkNow(){toast('جاري عمل النسخة…');api('backup',{}).then(function(r){bkDraw(r.items);toast('تم عمل نسخة احتياطية')},function(e){toast(e.message)})}
+function bkGet(n){toast('جاري التنزيل…');fetch(BASE+'/api/backupfile?v=22&name='+encodeURIComponent(n),{headers:{Authorization:'Bearer '+TOKEN}}).then(function(r){if(!r.ok)throw new Error('تعذّر التنزيل');return r.text()}).then(function(t){var fn='tahseel-raya-backup-'+n+'.json';
+  if(window.Native&&N.saveText)N.saveText(fn,t);else{var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=fn;document.body.appendChild(a);a.click();a.remove();toast('تم التنزيل')}},function(e){toast(e.message)})}
+function bkRestore(n){confirmBox('ترجيع كل البيانات لنسخة «'+esc(bkName(n))+'»؟ أي تسجيل حصل بعدها هيتمسح. هتتعمل نسخة من الوضع الحالي الأول علشان تقدر ترجع لو احتجت.','استرجاع',function(){toast('جاري الاسترجاع…');api('restore',{name:n}).then(function(d){take(d);closeAll();render();toast('تم الاسترجاع')},function(e){toast(e.message)})})}
+
 /* ---------- collections ---------- */
 function filtered(){
   var k=F.k,q=norm(F.q),a=DP.filter(function(p){
@@ -593,7 +605,7 @@ function vSet(){
   if(st.perm===false)h+='<div class="banner">إذن الإشعارات مقفول على الموبايل. <button onclick="N.requestNotifPerm()">السماح بالإشعارات</button></div>';
   h+='<div class="sec" style="margin-top:4px">الحساب</div><div class="card">'+kv('الاسم',esc(D.me.name))+kv('اسم المستخدم','<span class="num">'+esc(D.me.username)+'</span>')+kv('الدور',admin()?'أدمن (كل الصلاحيات)':'مستخدم')+'<div class="btns"><button class="btn g sm" onclick="pwSheet()">تغيير كلمة السر</button><button class="btn g sm" onclick="sync()">تحديث البيانات</button><button class="btn dng sm" onclick="confirmBox(\'تسجيل الخروج؟\',\'خروج\',logout)">خروج</button></div></div>';
   if(admin()){
-    h+='<div class="sec">المستخدمين والصلاحيات</div><div class="list">'+(D.users||[]).map(function(u){return '<button class="row" onclick="userForm(\''+u.id+'\')"><span class="m"><div class="n">'+esc(u.name)+'</div><div class="u"><span class="num">'+esc(u.username)+'</span> · '+(u.role==='admin'?'أدمن':Object.keys(u.perms||{}).length+' صلاحية'+((u.projs||[]).length?' · '+u.projs.map(pname).join('، '):''))+'</div></span><span class="a">'+(u.active?'<span class="tag done">مفعّل</span>':'<span class="tag cancelled">موقوف</span>')+'</span></button>'}).join('')+'</div><div class="btns"><button class="btn k sm" onclick="userForm()">+ مستخدم جديد</button><button class="btn g sm" onclick="logSheet()">سجل الحركات</button></div>';
+    h+='<div class="sec">المستخدمين والصلاحيات</div><div class="list">'+(D.users||[]).map(function(u){return '<button class="row" onclick="userForm(\''+u.id+'\')"><span class="m"><div class="n">'+esc(u.name)+'</div><div class="u"><span class="num">'+esc(u.username)+'</span> · '+(u.role==='admin'?'أدمن':Object.keys(u.perms||{}).length+' صلاحية'+((u.projs||[]).length?' · '+u.projs.map(pname).join('، '):''))+'</div></span><span class="a">'+(u.active?'<span class="tag done">مفعّل</span>':'<span class="tag cancelled">موقوف</span>')+'</span></button>'}).join('')+'</div><div class="btns"><button class="btn k sm" onclick="userForm()">+ مستخدم جديد</button><button class="btn g sm" onclick="logSheet()">سجل الحركات</button></div><div class="btns"><button class="btn g sm" onclick="bkSheet()">النسخ الاحتياطية</button></div>';
   }
   h+='<div class="sec">تنبيهات التحصيل (على هذا الموبايل)</div><div class="card">'
    +'<div class="sw"><div>إشعار قبل التحصيل<small>تنبيه يومي بالدفعات المستحقة والقريبة</small></div><button class="tg '+(s.on?'on':'')+'" onclick="setS(\'on\',!LS.on)"></button></div>'
