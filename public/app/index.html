@@ -171,7 +171,7 @@ var RT={finish:'تشطيب الوحدة',handover:'استلام الوحدة',is
 var RS={new:'جديد',progress:'جاري التنفيذ',done:'تم',rejected:'مرفوض'};
 var FK={call:'اتصال',wa:'واتساب',visit:'زيارة'};
 var FR=['وعد بالسداد','لم يرد','طلب تأجيل','رفض السداد','مشكلة عند العميل','رقم خطأ','أخرى'];
-var PERM={viewAll:'يشوف كل العملاء والدفعات (من غيرها: المتأخرين فقط)',dashboard:'يشوف لوحة الأرقام الإجمالية',contact:'يتواصل مع العميل ويسجّل متابعة (يشوف أرقام التليفونات)',collect:'يسجّل تحصيل بصورة المستند',edit:'يعدّل ويضيف ويحذف عقود ودفعات',requests:'طلبات العملاء ولينكات العملاء',export:'تصدير Excel',treasury:'الخزنة: يسجّل قيود الوارد والمصروف ويشوف الرصيد والمصاريف'};
+var PERM={viewAll:'يشوف كل العملاء والدفعات (من غيرها: المتأخرين فقط)',dashboard:'يشوف لوحة الأرقام الإجمالية',contact:'يتواصل مع العميل ويسجّل متابعة (يشوف أرقام التليفونات)',collect:'يسجّل تحصيل بصورة المستند',edit:'يعدّل ويضيف ويحذف عقود ودفعات',requests:'طلبات العملاء ولينكات العملاء',export:'تصدير Excel',treasury:'الخزنة والبنوك: يسجّل قيود الوارد والمصروف والإيداع ويشوف الأرصدة وكشوف الحسابات والمصاريف'};
 var TODAY=todayISO(),CM={},PM={},PC={},DC=[],DP=[];
 function can(p){return D&&D.me&&(D.me.role==='admin'||!!(D.me.perms||{})[p])}
 function admin(){return D&&D.me&&D.me.role==='admin'}
@@ -393,15 +393,16 @@ function trCC(){var o={};(D.tr.ccs||[]).forEach(function(x){o[x.id]=x});return o
 // every movement in the box: cash collections (automatic) + journal entries, from the start date
 function trMoves(){var T=D.tr,s=T.conf.start,cc=trCC();
   return T.cash.map(function(c){return {auto:1,p:c.p,date:c.date,k:'in',amt:+c.amt,at:c.at,desc:'تحصيل كاش · '+c.client,sub:(c.unit||'')+(c.by?' · '+c.by:'')}})
-  .concat(T.items.map(function(e){return {e:e,date:e.date,k:e.k,amt:+e.amt,at:e.at,desc:e.desc,sub:(e.k==='exp'?((cc[e.cc]||{}).name||'—'):TRK[e.k])+(e.who?' · '+e.who:'')+' · '+e.by}}))
+  .concat(T.items.map(function(e){return {e:e,date:e.date,k:e.k,amt:+e.amt,at:e.at,desc:e.desc,sub:(e.k==='exp'?((cc[e.cc]||{}).name||'—'):e.k==='dep'&&e.bank?'إيداع في '+((bkM()[e.bank]||{}).name||''):TRK[e.k])+(e.who?' · '+e.who:'')+' · '+e.by}}))
+  .concat((T.bt||[]).filter(function(e){return e.k==='wd'}).map(function(e){return {bt:e,date:e.date,k:'in',amt:+e.amt,at:e.at,desc:'سحب من '+((bkM()[e.bank]||{}).name||'البنك')+' · '+e.desc,sub:e.by}}))
   .filter(function(x){return x.date>=s})}
 function sg(x){return x.k==='in'?x.amt:-x.amt}
 function trBal(mv,upto){return D.tr.conf.open+mv.reduce(function(a,x){return upto&&x.date>upto?a:a+sg(x)},0)}
 function setTR(k,v){window[k]=v;render()}
 function vTr(){
   if(!D.tr)return '<div class="empty">الخزنة غير متاحة</div>';
-  var h='<div class="chips">'+[['j','اليومية'],['e','المصاريف']].map(function(x){return '<button class="chip '+(TRV===x[0]?'on':'')+'" onclick="setTR(\'TRV\',\''+x[0]+'\')">'+x[1]+'</button>'}).join('')+'</div>';
-  return h+(TRV==='e'?vExp():vJour());
+  var h='<div class="chips">'+[['j','الخزنة'],['b','البنوك'],['e','المصاريف']].map(function(x){return '<button class="chip '+(TRV===x[0]?'on':'')+'" onclick="TRB=\'\';setTR(\'TRV\',\''+x[0]+'\')">'+x[1]+'</button>'}).join('')+'</div>';
+  return h+(TRV==='e'?vExp():TRV==='b'?vBanks():vJour());
 }
 function vJour(){
   var mv=trMoves(),cf=D.tr.conf,day=TRD||TODAY,bal=trBal(mv),h='';
@@ -423,8 +424,8 @@ function vJour(){
   return h;
 }
 function trRow(x){
-  var on=x.auto?'openP('+x.p+')':'trOpen('+x.e.id+')';
-  return '<button class="row" onclick="'+on+'"><span class="m"><div class="n">'+esc(x.desc)+'</div><div class="u">'+esc(x.sub)+'</div></span><span class="a"><b style="color:'+(x.k==='in'?'#1f9d55':'var(--red2)')+'">'+(x.k==='in'?'+':'−')+money(x.amt)+'</b><span class="tag'+(x.k==='in'?' done':x.k==='exp'?' od':'')+'">'+(x.auto?'تحصيل كاش':TRK[x.k])+'</span></span></button>';
+  var on=x.auto?'openP('+x.p+')':x.bt?'btOpen('+x.bt.id+')':'trOpen('+x.e.id+')';
+  return '<button class="row" onclick="'+on+'"><span class="m"><div class="n">'+esc(x.desc)+'</div><div class="u">'+esc(x.sub)+'</div></span><span class="a"><b style="color:'+(x.k==='in'?'#1f9d55':'var(--red2)')+'">'+(x.k==='in'?'+':'−')+money(x.amt)+'</b><span class="tag'+(x.k==='in'?' done':x.k==='exp'?' od':'')+'">'+(x.auto?'تحصيل كاش':x.bt?'سحب من البنك':TRK[x.k])+'</span></span></button>';
 }
 function trRange(){
   var y=TODAY.slice(0,4),m=TODAY.slice(0,7);
@@ -435,7 +436,7 @@ function trRange(){
   return ['0000','9999'];
 }
 function vExp(){
-  var cc=trCC(),r=trRange(),l=D.tr.items.filter(function(e){return e.k==='exp'&&e.date>=r[0]&&e.date<=r[1]}),g={},tot=0;
+  var cc=trCC(),r=trRange(),l=expList(r),g={},tot=0;
   l.forEach(function(e){var a=g[e.cc]||(g[e.cc]={s:0,n:0});a.s+=+e.amt;a.n++;tot+=+e.amt});
   var h='<div class="chips">'+[['m','الشهر ده'],['pm','الشهر اللي فات'],['y','السنة دي'],['a','الكل'],['c','فترة محددة']].map(function(x){return '<button class="chip '+(TRP===x[0]?'on':'')+'" onclick="TRCC=\'\';setTR(\'TRP\',\''+x[0]+'\')">'+x[1]+'</button>'}).join('')+'</div>';
   if(TRP==='c')h+='<div class="grid2" style="grid-template-columns:1fr 1fr"><div><label class="f">من</label><input class="inp" type="date" value="'+TRF+'" onchange="setTR(\'TRF\',this.value)"></div><div><label class="f">إلى</label><input class="inp" type="date" value="'+TRT+'" onchange="setTR(\'TRT\',this.value)"></div></div>';
@@ -444,7 +445,7 @@ function vExp(){
   h+='<div class="sec">حسب مركز التكلفة</div>'+(ks.length?'<div class="card">'+ks.map(function(k){return '<button class="mrow" style="grid-template-columns:130px 1fr auto;'+(k===TRCC?'background:#f3f3f4;border-radius:8px':'')+'" onclick="setTR(\'TRCC\',TRCC===\''+k+'\'?\'\':\''+k+'\')"><span>'+esc((cc[k]||{}).name||'—')+'</span><span class="tr"><i style="width:'+pc(g[k].s,mx)+'%;background:#e5534b"></i></span><b>'+money(g[k].s)+'</b></button>'}).join('')+'</div>':'<div class="empty">لا توجد مصاريف في الفترة دي</div>');
   var ll=l.filter(function(e){return !TRCC||e.cc===TRCC}).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.id-a.id});
   if(ll.length)h+='<div class="gh"><span>'+(TRCC?'مصاريف '+esc((cc[TRCC]||{}).name||''):'كل المصاريف')+'</span><span>'+money(ll.reduce(function(a,e){return a+ +e.amt},0))+'</span></div><div class="list">'+ll.slice(0,300).map(function(e){
-    return '<button class="row" onclick="trOpen('+e.id+')"><span class="d"><b class="num">'+(+e.date.slice(8,10))+'</b><span>'+MON[+e.date.slice(5,7)-1]+'</span></span><span class="m"><div class="n">'+esc(e.desc)+'</div><div class="u">'+esc((cc[e.cc]||{}).name||'')+(e.who?' · '+esc(e.who):'')+' · '+esc(e.by)+'</div></span><span class="a"><b>'+money(e.amt)+'</b>'+(e.docs?'<span class="tag">📎</span>':'')+'</span></button>'}).join('')+'</div>';
+    return '<button class="row" onclick="'+(e.src==='bt'?'btOpen':'trOpen')+'('+e.id+')"><span class="d"><b class="num">'+(+e.date.slice(8,10))+'</b><span>'+MON[+e.date.slice(5,7)-1]+'</span></span><span class="m"><div class="n">'+esc(e.desc)+'</div><div class="u">'+esc((cc[e.cc]||{}).name||'')+' · '+esc(e.srcn)+(e.who?' · '+esc(e.who):'')+' · '+esc(e.by)+'</div></span><span class="a"><b>'+money(e.amt)+'</b>'+(e.docs?'<span class="tag">📎</span>':'')+'</span></button>'}).join('')+'</div>';
   h+='<div class="btns"><button class="btn sm" onclick="trForm(\'exp\')">− مصروف جديد</button><button class="btn g sm" onclick="ccSheet()">مراكز التكلفة</button>'+(can('export')?'<button class="btn g sm" onclick="trExport()">تصدير Excel</button>':'')+'</div>';
   return h;
 }
@@ -455,20 +456,20 @@ function trForm(k){
    +'<div class="grid2" style="grid-template-columns:1fr 1fr"><div><label class="f">المبلغ</label><input class="inp" id="t_amt" type="number" inputmode="decimal"></div><div><label class="f">التاريخ</label><input class="inp" id="t_date" type="date" min="'+s+'" max="'+TODAY+'" value="'+TODAY+'"></div></div>'
    +(k==='exp'?'<label class="f">مركز التكلفة</label><div style="display:flex;gap:6px"><select class="inp" id="t_cc" style="flex:1"><option value="">اختر مركز التكلفة</option>'+ccOpts(TRCC)+'</select><button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="var x=document.getElementById(\'t_ccnew\');x.style.display=\'flex\';document.getElementById(\'cc_n\').focus()">+ جديد</button></div><div id="t_ccnew" style="display:none;gap:6px;margin-top:6px"><input class="inp" id="cc_n" style="flex:1" placeholder="اسم مركز التكلفة الجديد"><button class="btn k sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="ccSave(\'\',1)">إضافة</button></div>':'')
    +'<label class="f">البيان</label><input class="inp" id="t_desc" placeholder="'+(k==='in'?'مثال: عهدة من الإدارة':k==='exp'?'مثال: فاتورة كهرباء الموقع':'مثال: إيداع بنك مصر')+'">'
-   +'<label class="f">'+(k==='in'?'من (اختياري)':k==='exp'?'المستفيد / المورد (اختياري)':'البنك / الحساب (اختياري)')+'</label><input class="inp" id="t_who">'
+   +(k==='dep'?'<label class="f">حساب البنك</label><select class="inp" id="t_bank"><option value="">اختر الحساب</option>'+bankOpts('')+'</select>'+((D.tr.banks||[]).length?'':'<p class="note" style="color:var(--red2)">لازم الأدمن يضيف حساب البنك الأول من «البنوك».</p>'):'<label class="f">'+(k==='in'?'من (اختياري)':'المستفيد / المورد (اختياري)')+'</label><input class="inp" id="t_who">')
    +'<label class="f">رقم المستند (اختياري)</label><input class="inp" id="t_ref">'
-   +'<label class="f">صورة الفاتورة / الإيصال (اختياري)</label><label class="photo" id="phbox"><span>📷 صوّر المستند</span><input type="file" accept="image/*" onchange="pickPhoto(this)"></label>'
+   +'<label class="f">'+(k==='dep'?'صورة إيصال الإيداع (إجبارية)':'صورة الفاتورة / الإيصال (اختياري)')+'</label><label class="photo" id="phbox"><span>📷 صوّر '+(k==='dep'?'إيصال البنك':'المستند')+'</span><input type="file" accept="image/*" onchange="pickPhoto(this)"></label>'
    +'</div><div class="btns"><button class="btn" onclick="trSave(\''+k+'\')">حفظ القيد</button></div>');
 }
 function trSave(k){
-  var amt=parseFloat(V('t_amt')),date=V('t_date')||TODAY,b={t:'tr.add',k:k,amt:amt,date:date,desc:V('t_desc'),who:V('t_who'),ref:V('t_ref'),cc:V('t_cc'),photo:PHOTO||undefined};
-  if(!(amt>0)){toast('اكتب المبلغ');return}if(k==='exp'&&!b.cc){toast('اختار مركز التكلفة');return}if(!b.desc){toast('اكتب البيان');return}
+  var amt=parseFloat(V('t_amt')),date=V('t_date')||TODAY,b={t:'tr.add',k:k,amt:amt,date:date,desc:V('t_desc'),who:V('t_who'),ref:V('t_ref'),cc:V('t_cc'),bank:V('t_bank'),photo:PHOTO||undefined};
+  if(!(amt>0)){toast('اكتب المبلغ');return}if(k==='dep'&&!b.bank){toast('اختار حساب البنك');return}if(k==='dep'&&!PHOTO){toast('لازم ترفق صورة إيصال الإيداع');return}if(k==='exp'&&!b.cc){toast('اختار مركز التكلفة');return}if(!b.desc){toast('اكتب البيان');return}
   var go=function(){op(b,'تم حفظ القيد').then(function(){PHOTO='';back();TRD=date;render()},function(){})};
   var bal=trBal(trMoves());if(k!=='in'&&amt>bal+0.001)confirmBox('المبلغ أكبر من رصيد الخزنة ('+Math.round(bal).toLocaleString('en-US')+'). تسجّله برضه؟','تسجيل',go);else go();
 }
 function trOpen(id){sheet('قيد خزنة',function(){var e=(D.tr.items||[]).filter(function(x){return x.id===id})[0];if(!e)return '<div class="empty">القيد غير موجود</div>';var cc=trCC();
   var h='<div class="card cen"><div class="note" style="margin:0">'+TRK[e.k]+'</div><div class="big" style="color:'+(e.k==='in'?'#1f9d55':'var(--red2)')+'">'+money(e.amt)+' <small style="font-size:14px;font-weight:600">ج.م</small></div></div><div class="card">'
-   +kv('البيان',esc(e.desc))+kv('التاريخ',fd(e.date))+(e.k==='exp'?kv('مركز التكلفة',esc((cc[e.cc]||{}).name||'—')):'')+kv(e.k==='in'?'من':e.k==='exp'?'المستفيد':'البنك / الحساب',esc(e.who))+kv('رقم المستند',esc(e.ref))+kv('سجّله',esc(e.by)+' · '+fdt(e.at))+'</div>';
+   +kv('البيان',esc(e.desc))+kv('التاريخ',fd(e.date))+(e.k==='exp'?kv('مركز التكلفة',esc((cc[e.cc]||{}).name||'—')):'')+(e.bank?kv('حساب البنك',esc((bkM()[e.bank]||{}).name||'')):'')+kv(e.k==='in'?'من':e.k==='exp'?'المستفيد':'البنك / الحساب',esc(e.who))+kv('رقم المستند',esc(e.ref))+kv('سجّله',esc(e.by)+' · '+fdt(e.at))+'</div>';
   if(e.docs)h+='<div class="sec">المستند</div><div class="card"><div class="thumbs">'+e.docs.map(function(x){return '<img data-k="'+esc(x.k)+'" onclick="showImg(\''+esc(x.k)+'\')" alt="">'}).join('')+'</div></div>';
   if(can('edit'))h+='<div class="btns"><button class="btn dng sm" onclick="trDel('+e.id+')">حذف القيد</button></div>';
   return h})}
@@ -491,8 +492,88 @@ function trExport(){var cc=trCC(),mv=trMoves().sort(function(a,b){return a.date<
   var g={};D.tr.items.forEach(function(e){if(e.k==='exp'){var k=(cc[e.cc]||{}).name||'—',mo=e.date.slice(0,7);g[k]=g[k]||{};g[k][mo]=(g[k][mo]||0)+ +e.amt}});
   var ms={};Object.keys(g).forEach(function(k){Object.keys(g[k]).forEach(function(m){ms[m]=1})});ms=Object.keys(ms).sort();
   var r3=[['مركز التكلفة'].concat(ms).concat(['الإجمالي'])];Object.keys(g).forEach(function(k){var t=0;r3.push([k].concat(ms.map(function(m){t+=g[k][m]||0;return g[k][m]||0})).concat([t]))});
-  N.exportXlsx('خزنة-راية-'+TODAY+'.xlsx',JSON.stringify({sheets:[{name:'يومية الخزنة',rows:r1},{name:'المصاريف',rows:r2},{name:'مراكز التكلفة شهرياً',rows:r3}]}));
+  var sh=[{name:'يومية الخزنة',rows:r1},{name:'المصاريف',rows:r2},{name:'مراكز التكلفة شهرياً',rows:r3}];(D.tr.banks||[]).forEach(function(b){sh.push({name:b.name.replace(/[\\\/?*\[\]:]/g,'').slice(0,31),rows:bankRows(b.id)})});
+  N.exportXlsx('خزنة-وبنوك-راية-'+TODAY+'.xlsx',JSON.stringify({sheets:sh}));
 }
+
+
+/* ---------- bank accounts (البنوك) ---------- */
+var TRB='',BTK={in:'إيداع / وارد',exp:'مصروف',wd:'سحب للخزنة',xfer:'تحويل لحساب تاني'};
+function bkM(){var o={};(D.tr.banks||[]).forEach(function(b){o[b.id]=b});return o}
+function bMoves(id){var T=D.tr,b=bkM()[id],bm=bkM(),cc=trCC();if(!b)return [];
+  var mv=T.bcol.filter(function(c){return c.bank===id}).map(function(c){return {auto:1,p:c.p,date:c.date,k:'in',amt:+c.amt,at:c.at,desc:'تحصيل · '+c.client,sub:(c.unit||'')+(c.acc?' · '+c.acc:'')+(c.by?' · '+c.by:'')}})
+   .concat(T.items.filter(function(e){return e.k==='dep'&&e.bank===id}).map(function(e){return {tr:e,date:e.date,k:'in',amt:+e.amt,at:e.at,desc:'إيداع من الخزنة · '+e.desc,sub:(e.ref?'مستند '+e.ref+' · ':'')+e.by}}))
+   .concat(T.bt.filter(function(e){return e.bank===id}).map(function(e){return {bt:e,date:e.date,k:e.k==='in'?'in':'out',amt:+e.amt,at:e.at,desc:e.desc,sub:(e.k==='exp'?(cc[e.cc]||{}).name||'مصروف':e.k==='xfer'?'تحويل إلى '+((bm[e.to]||{}).name||''):BTK[e.k])+(e.who?' · '+e.who:'')+' · '+e.by}}))
+   .concat(T.bt.filter(function(e){return e.k==='xfer'&&e.to===id}).map(function(e){return {bt:e,date:e.date,k:'in',amt:+e.amt,at:e.at,desc:'تحويل من '+((bm[e.bank]||{}).name||'')+' · '+e.desc,sub:e.by}}));
+  return mv.filter(function(x){return x.date>=b.start}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||'')<(b.at||'')?-1:1})}
+function bBal(id){var b=bkM()[id];return (b?+b.open||0:0)+bMoves(id).reduce(function(a,x){return a+sg(x)},0)}
+function vBanks(){
+  if(TRB&&bkM()[TRB])return vBank(TRB);
+  var l=D.tr.banks||[],h='';
+  if(!l.length)h+='<div class="empty">لسه مفيش حسابات بنك'+(admin()?' — ضيف أول حساب':'')+'</div>';
+  else{var tot=0;h+='<div class="list">'+l.map(function(b){var s=bBal(b.id);if(!b.off)tot+=s;return '<button class="row" onclick="setTR(\'TRB\',\''+b.id+'\')"><span class="m"><div class="n">'+esc(b.name)+'</div><div class="u">'+(b.no?'<span class="num">'+esc(b.no)+'</span> · ':'')+'من '+fd(b.start)+'</div></span><span class="a"><b style="'+(s<0?'color:var(--red2)':'')+'">'+money(s)+'</b>'+(b.off?'<span class="tag cancelled">موقوف</span>':'')+'</span></button>'}).join('')+'</div>';
+    h='<div class="card cen"><div class="note" style="margin:0">إجمالي أرصدة البنوك</div><div class="big">'+money(tot)+' <small style="font-size:14px;font-weight:600">ج.م</small></div></div>'+h}
+  if(admin())h+='<div class="btns"><button class="btn k sm" onclick="bankForm()">+ حساب بنك</button></div>';
+  h+='<p class="note">التحصيلات اللي حساب التحصيل بتاعها بنفس اسم الحساب (أو أي اسم تاني متسجل له) بتنزل في كشف الحساب لوحدها، وكمان الإيداعات من الخزنة.</p>';
+  return h;
+}
+function vBank(id){
+  var b=bkM()[id],mv=bMoves(id),bal=+b.open||0,h='';
+  var rows=mv.map(function(x){bal+=sg(x);return {x:x,bal:bal}}).reverse();
+  h+='<div class="btns" style="margin-top:0"><button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="setTR(\'TRB\',\'\')">→ كل الحسابات</button>'+(admin()?'<button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="bankForm(\''+id+'\')">تعديل الحساب</button>':'')+'</div>';
+  h+='<div class="card cen"><div class="note" style="margin:0">'+esc(b.name)+(b.no?' · <span class="num">'+esc(b.no)+'</span>':'')+'</div><div class="big" style="'+(bal<0?'color:var(--red2)':'')+'">'+money(bal)+' <small style="font-size:14px;font-weight:600">ج.م</small></div><div class="note" style="margin:0">رصيد أول المدة '+Math.round(+b.open||0).toLocaleString('en-US')+' بتاريخ '+fd(b.start)+'</div></div>';
+  if(!b.off)h+='<div class="btns"><button class="btn k sm" onclick="btForm(\''+id+'\',\'in\')">+ إيداع</button><button class="btn sm" onclick="btForm(\''+id+'\',\'exp\')">− صرف</button></div><div class="btns"><button class="btn g sm" onclick="btForm(\''+id+'\',\'wd\')">سحب للخزنة</button><button class="btn g sm" onclick="btForm(\''+id+'\',\'xfer\')">تحويل لحساب تاني</button></div>';
+  h+='<div class="gh"><span>كشف الحساب</span><span>'+mv.length+' حركة</span></div>';
+  if(!rows.length)return h+'<div class="empty">لا توجد حركات بعد</div>';
+  h+='<div class="list">'+rows.slice(0,300).map(function(r){var x=r.x,on=x.auto?'openP('+x.p+')':x.tr?'trOpen('+x.tr.id+')':'btOpen('+x.bt.id+')';
+    return '<button class="row" onclick="'+on+'"><span class="d"><b class="num">'+(+x.date.slice(8,10))+'</b><span>'+MON[+x.date.slice(5,7)-1]+'</span></span><span class="m"><div class="n">'+esc(x.desc)+'</div><div class="u">'+esc(x.sub)+'</div></span><span class="a"><b style="color:'+(x.k==='in'?'#1f9d55':'var(--red2)')+'">'+(x.k==='in'?'+':'−')+money(x.amt)+'</b><small class="num" style="color:#777">رصيد '+Math.round(r.bal).toLocaleString('en-US')+'</small></span></button>'}).join('')+'</div>'+(rows.length>300?'<p class="note">معروض آخر 300 حركة — الكشف الكامل في تصدير Excel.</p>':'');
+  if(can('export'))h+='<div class="btns"><button class="btn g sm" onclick="bankExport(\''+id+'\')">تصدير كشف الحساب Excel</button></div>';
+  return h;
+}
+function bankOpts(sel,skip){return (D.tr.banks||[]).filter(function(b){return !b.off&&b.id!==skip}).map(function(b){return '<option value="'+b.id+'"'+(b.id===sel?' selected':'')+'>'+esc(b.name)+'</option>'}).join('')}
+function bankForm(id){var b=id?bkM()[id]:{start:TODAY,open:0,keys:[]};
+  var used={};(D.tr.banks||[]).forEach(function(x){if(x.id!==id)[x.name].concat(x.keys||[]).forEach(function(k){used[k.toLowerCase().replace(/[\s._\-\/]+/g,'')]=1})});
+  var sug=(D.tr.accs||[]).filter(function(a){return a.name&&!used[a.name.toLowerCase().replace(/[\s._\-\/]+/g,'')]&&!/cash|كاش|نقد|خزن/i.test(a.name)});
+  sheet(id?'تعديل حساب البنك':'حساب بنك جديد','<div class="card"><label class="f">اسم الحساب</label><input class="inp" id="bk_n" value="'+esc(b.name||'')+'" placeholder="مثال: بنك راية 203">'
+   +'<label class="f">رقم الحساب (اختياري)</label><input class="inp" id="bk_no" dir="ltr" value="'+esc(b.no||'')+'">'
+   +'<div class="grid2" style="grid-template-columns:1fr 1fr"><div><label class="f">رصيد أول المدة</label><input class="inp" id="bk_o" type="number" inputmode="decimal" value="'+(b.open||0)+'"></div><div><label class="f">تاريخ البداية</label><input class="inp" id="bk_s" type="date" max="'+TODAY+'" value="'+b.start+'"></div></div>'
+   +'<label class="f">أسماء تانية للحساب في «حساب التحصيل» (افصل بفاصلة)</label><textarea class="inp" id="bk_k" style="height:70px" placeholder="raya203, raya 203">'+esc((b.keys||[]).join(', '))+'</textarea>'
+   +(sug.length?'<p class="note">أسماء مكتوبة في التحصيلات — اضغط لإضافتها:</p><div class="chips" style="flex-wrap:wrap">'+sug.slice(0,16).map(function(a){return '<button class="chip" onclick="bkAddKey(this,\''+esc(a.name).replace(/'/g,'')+'\')">'+esc(a.name)+' <small class="num">'+a.n+'</small></button>'}).join('')+'</div>':'')
+   +'<p class="note">أي تحصيل من تاريخ البداية وبعده حساب التحصيل بتاعه بالاسم ده أو أي اسم من دول هيتسجل في كشف الحساب.</p>'
+   +(id?'<label class="sw" style="margin-top:12px"><div>موقوف<small>مش هيظهر في الاختيارات الجديدة</small></div><input type="checkbox" id="bk_off" style="width:24px;height:24px;accent-color:#c8102e"'+(b.off?' checked':'')+'></label>':'')
+   +'</div><div class="btns"><button class="btn" onclick="bankSave(\''+(id||'')+'\')">حفظ</button></div>')}
+function bkAddKey(el,k){var t=document.getElementById('bk_k'),l=t.value.split(/[,،\n]/).map(function(x){return x.trim()}).filter(Boolean);if(l.indexOf(k)<0)l.push(k);t.value=l.join(', ');el.classList.add('on')}
+function bankSave(id){var n=V('bk_n'),o=parseFloat(V('bk_o')||'0'),off=document.getElementById('bk_off');if(!n){toast('اكتب اسم الحساب');return}if(!isFinite(o)){toast('الرصيد غير صحيح');return}
+  op({t:'bank.save',id:id||undefined,name:n,no:V('bk_no'),open:o,start:V('bk_s')||TODAY,keys:V('bk_k'),off:off?off.checked:false},'تم حفظ الحساب').then(function(){back();render()},function(){})}
+function btForm(id,k){PHOTO='';var b=bkM()[id],mn=b.start>D.tr.conf.start||k!=='wd'?b.start:D.tr.conf.start;
+  sheet(esc(b.name)+' · '+BTK[k],'<div class="card">'
+   +'<div class="grid2" style="grid-template-columns:1fr 1fr"><div><label class="f">المبلغ</label><input class="inp" id="t_amt" type="number" inputmode="decimal"></div><div><label class="f">التاريخ</label><input class="inp" id="t_date" type="date" min="'+mn+'" max="'+TODAY+'" value="'+TODAY+'"></div></div>'
+   +(k==='exp'?'<label class="f">مركز التكلفة</label><select class="inp" id="t_cc"><option value="">اختر مركز التكلفة</option>'+ccOpts('')+'</select>':'')
+   +(k==='xfer'?'<label class="f">إلى حساب</label><select class="inp" id="t_to"><option value="">اختر الحساب</option>'+bankOpts('',id)+'</select>':'')
+   +'<label class="f">الوصف</label><input class="inp" id="t_desc" placeholder="'+(k==='in'?'مثال: تحويل من العميل / إيداع شيك':k==='exp'?'مثال: سداد فاتورة مورد':k==='wd'?'مثال: سحب نقدي لمصاريف الموقع':'مثال: تغطية حساب')+'">'
+   +(k==='in'||k==='exp'?'<label class="f">'+(k==='in'?'من (اختياري)':'المستفيد (اختياري)')+'</label><input class="inp" id="t_who">':'')
+   +'<label class="f">رقم المستند / الشيك (اختياري)</label><input class="inp" id="t_ref">'
+   +'<label class="f">صورة المستند (اختياري)</label><label class="photo" id="phbox"><span>📷 صوّر المستند</span><input type="file" accept="image/*" onchange="pickPhoto(this)"></label>'
+   +(k==='wd'?'<p class="note">المبلغ هيتخصم من البنك ويدخل رصيد الخزنة.</p>':'')
+   +'</div><div class="btns"><button class="btn" onclick="btSave(\''+id+'\',\''+k+'\')">حفظ</button></div>')}
+function btSave(id,k){var amt=parseFloat(V('t_amt')),b={t:'bt.add',bank:id,k:k,amt:amt,date:V('t_date')||TODAY,desc:V('t_desc'),cc:V('t_cc'),to:V('t_to'),who:V('t_who'),ref:V('t_ref'),photo:PHOTO||undefined};
+  if(!(amt>0)){toast('اكتب المبلغ');return}if(k==='exp'&&!b.cc){toast('اختار مركز التكلفة');return}if(k==='xfer'&&!b.to){toast('اختار الحساب المحوّل إليه');return}if(!b.desc){toast('اكتب الوصف');return}
+  var go=function(){op(b,'تم حفظ الحركة').then(function(){PHOTO='';back();render()},function(){})};
+  var bal=bBal(id);if(k!=='in'&&amt>bal+0.001)confirmBox('المبلغ أكبر من رصيد الحساب ('+Math.round(bal).toLocaleString('en-US')+'). تسجّله برضه؟','تسجيل',go);else go()}
+function btOpen(id){sheet('حركة بنك',function(){var e=(D.tr.bt||[]).filter(function(x){return x.id===id})[0];if(!e)return '<div class="empty">الحركة غير موجودة</div>';var bm=bkM(),cc=trCC();
+  var h='<div class="card cen"><div class="note" style="margin:0">'+esc((bm[e.bank]||{}).name||'')+' · '+BTK[e.k]+'</div><div class="big" style="color:'+(e.k==='in'?'#1f9d55':'var(--red2)')+'">'+money(e.amt)+' <small style="font-size:14px;font-weight:600">ج.م</small></div></div><div class="card">'
+   +kv('الوصف',esc(e.desc))+kv('التاريخ',fd(e.date))+(e.k==='exp'?kv('مركز التكلفة',esc((cc[e.cc]||{}).name||'—')):'')+(e.k==='xfer'?kv('إلى حساب',esc((bm[e.to]||{}).name||'')):'')+kv(e.k==='in'?'من':'المستفيد',esc(e.who))+kv('رقم المستند',esc(e.ref))+kv('سجّلها',esc(e.by)+' · '+fdt(e.at))+'</div>';
+  if(e.docs)h+='<div class="sec">المستند</div><div class="card"><div class="thumbs">'+e.docs.map(function(x){return '<img data-k="'+esc(x.k)+'" onclick="showImg(\''+esc(x.k)+'\')" alt="">'}).join('')+'</div></div>';
+  if(can('edit'))h+='<div class="btns"><button class="btn dng sm" onclick="btDel('+e.id+')">حذف الحركة</button></div>';
+  return h})}
+function btDel(id){confirmBox('حذف الحركة دي؟','حذف',function(){op({t:'bt.del',id:id},'تم حذف الحركة').then(function(){back();render()},function(){})})}
+function bankRows(id){var b=bkM()[id],bal=+b.open||0,r=[['التاريخ','الوصف','التفاصيل','وارد','منصرف','الرصيد']];r.push([b.start,'رصيد أول المدة','','','',bal]);
+  bMoves(id).forEach(function(x){bal+=sg(x);r.push([x.date,x.desc,x.sub,x.k==='in'?x.amt:'',x.k!=='in'?x.amt:'',Math.round(bal*100)/100])});return r}
+function bankExport(id){var b=bkM()[id];N.exportXlsx('كشف-حساب-'+b.name.replace(/[\\\/:*?"<>|]/g,'')+'-'+TODAY+'.xlsx',JSON.stringify({sheets:[{name:'كشف الحساب',rows:bankRows(id)}]}))}
+function expList(r){var bm=bkM();
+  return D.tr.items.filter(function(e){return e.k==='exp'}).map(function(e){return Object.assign({src:'tr',srcn:'الخزنة'},e)})
+   .concat((D.tr.bt||[]).filter(function(e){return e.k==='exp'}).map(function(e){return Object.assign({src:'bt',srcn:(bm[e.bank]||{}).name||'بنك'},e)}))
+   .filter(function(e){return e.date>=r[0]&&e.date<=r[1]})}
 
 /* ---------- collections ---------- */
 function filtered(){
@@ -592,7 +673,7 @@ function collectForm(id){
   sheet('تسجيل التحصيل','<div class="card"><div class="cen note">'+esc(CM[p.c].client)+' · '+TYPE[p.type]+'</div>'+photoBox()
   +'<label class="f">المبلغ المحصّل</label><input class="inp" id="c_amt" type="number" inputmode="decimal" value="'+p.amt+'">'
   +'<label class="f">تاريخ التحصيل</label><input class="inp" id="c_date" type="date" max="'+TODAY+'" value="'+TODAY+'">'
-  +'<label class="f">حساب التحصيل</label><input class="inp" id="c_acc" list="accs" placeholder="مثال: raya 203 / cash"><datalist id="accs">'+accts().map(function(a){return '<option value="'+esc(a)+'">'}).join('')+'</datalist>'
+  +'<label class="f">حساب التحصيل</label><input class="inp" id="c_acc" list="accs" placeholder="مثال: raya 203 / cash"><datalist id="accs">'+(D.tr?(D.tr.banks||[]).filter(function(b){return !b.off}).map(function(b){return b.name}):[]).concat(accts()).map(function(a){return '<option value="'+esc(a)+'">'}).join('')+'</datalist>'
   +'<label class="sw" style="margin-top:12px"><div>استلام نقدي (كاش)<small>المبلغ يدخل رصيد الخزنة</small></div><input type="checkbox" id="c_cash" style="width:24px;height:24px;accent-color:#c8102e" onchange="var a=document.getElementById(\'c_acc\');if(this.checked&&!a.value)a.value=\'cash\'"></label>'
   +'<label class="f">رقم الإيصال (اختياري)</label><input class="inp" id="c_rc">'
   +'<p class="note">لو المبلغ أقل من قيمة الدفعة، الباقي يتسجّل كدفعة مستقلة بنفس تاريخ الاستحقاق.</p></div><div class="btns"><button class="btn" onclick="collect('+id+')">حفظ التحصيل</button></div>');
