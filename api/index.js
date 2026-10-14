@@ -43,7 +43,7 @@ function blobStore() {
 }
 
 const MAIN = 'db/main.json', USERS = 'db/users.json';
-const PERMS = ['viewAll', 'dashboard', 'contact', 'collect', 'edit', 'requests', 'export'];
+const PERMS = ['viewAll', 'dashboard', 'contact', 'collect', 'edit', 'requests', 'export', 'treasury'];
 const SECRET = process.env.AUTH_SECRET || '';
 class Err extends Error { constructor(code, msg) { super(msg); this.code = code; } }
 const bad = (m, c) => { throw new Err(c || 400, m); };
@@ -108,6 +108,21 @@ async function login(b) {
   return { token: token(res), me: pub(res) };
 }
 
+/* ---------- treasury ---------- */
+// The cash balance = opening balance + cash collections + other cash in − expenses − cash deposited to the bank,
+// counting only movements on or after the treasury start date (older cash collections from the sheets are not in the box).
+const TR_START = '2026-10-15', TRK = ['in', 'exp', 'dep'];
+const isCash = p => p.st === 'done' && !!p.cdate && (!!p.tr || /cash|كاش|نقد|خزن/i.test(p.cacc || ''));
+const trConf = m => Object.assign({ start: TR_START, open: 0 }, m.trc || {}, { set: !!m.trc });
+const ccList = m => m.ccs || projects(m).map(p => ({ id: 'cc-' + p.id, name: 'مشروع ' + p.name }))
+  .concat([{ id: 'cc-adm', name: 'مصاريف إدارية عامة' }, { id: 'cc-sal', name: 'رواتب وأجور' }, { id: 'cc-mkt', name: 'تسويق وعمولات' }, { id: 'cc-misc', name: 'نثريات' }]);
+function trView(m) {
+  const cf = trConf(m), cm = {}; m.contracts.forEach(c => cm[c.id] = c);
+  const cash = m.payments.filter(p => isCash(p) && p.cdate >= cf.start && cm[p.c])
+    .map(p => ({ p: p.id, date: p.cdate, amt: p.amt, client: cm[p.c].client, unit: cm[p.c].unit || '', by: p.cby || '', at: p.cat || '' }));
+  return { conf: cf, ccs: ccList(m), items: m.tr || [], cash };
+}
+
 /* ---------- data views ---------- */
 const empty = () => ({ rev: 0, contracts: [], payments: [], followups: [], requests: [], log: [], seq: { pay: 0, fu: 0, req: 0 } });
 const S15 = { id: 's15', name: '15 شقة' }, NEW_PROJECTS = ['pc', 'ph', 'pk', 'i350', 'i389'];
@@ -131,6 +146,7 @@ function view(m, u, us) {
     followups: contact || all ? m.followups.filter(f => cm[f.c] && (all || seen[f.c])) : [],
     requests: reqs ? m.requests.filter(q => cm[q.c]) : [] };
   if (reqs && !all) out.cidx = m.contracts.filter(c => cm[c.id] && c.st === 'active').map(c => ({ id: c.id, client: c.client, unit: c.unit, proj: projOf(c) }));
+  if (can(u, 'treasury')) out.tr = trView(m);
   if (u.role === 'admin') { out.users = us.users.map(pub); out.log = m.log.slice(-200).reverse(); out.canAdd = NEW_PROJECTS.some(id => !projects(m).some(p => p.id === id)); }
   return out;
 }
@@ -199,6 +215,7 @@ async function op(u, b) {
     if (!b.photo) bad('صورة مستند التحصيل إجبارية');
     doc = { k: await savePhoto(b.photo, 'p' + (+b.id || 0)), at, by: u.name };
   }
+  if (t === 'tr.add' && b.photo) { need(u, 'treasury'); doc = { k: await savePhoto(b.photo, 'tr'), at, by: u.name }; }
   const r = await mutate(MAIN, m => {
     m = m || empty();
     const P = id => { const p = m.payments.find(x => x.id === +id) || bad('الدفعة غير موجودة', 404); C(p.c); return p; };
@@ -211,10 +228,11 @@ async function op(u, b) {
       if (!isDate(b.cdate) || b.cdate > T) bad('تاريخ التحصيل غير صحيح');
       if (amt < p.amt) { const rest = Object.assign({}, p, { id: ++m.seq.pay, amt: Math.round((p.amt - amt) * 100) / 100, note: [p.note, 'باقي دفعة محصّلة جزئياً'].filter(Boolean).join(' · ') }); delete rest.docs; m.payments.push(rest); p.amt = amt; }
       Object.assign(p, { st: 'done', cdate: b.cdate, cacc: str(b.cacc, 60), rcpt: str(b.rcpt, 40), cby: u.name, cat: at }); clean(p);
+      if (b.cash) { p.tr = 1; if (!p.cacc) p.cacc = 'cash'; }
       p.docs = (p.docs || []).concat(doc);
       d = 'تحصيل ' + amt + ' من ' + c.client;
     } else if (t === 'pay.doc') { const p = P(b.id); p.docs = (p.docs || []).concat(doc); d = 'إضافة مستند لدفعة ' + C(p.c).client; }
-    else if (t === 'pay.uncollect') { need(u, 'edit'); const p = P(b.id); p.st = p.m === 'chq' ? 'safe' : 'wait'; ['cdate', 'cacc', 'rcpt', 'cby', 'cat'].forEach(k => delete p[k]); d = 'تراجع عن تحصيل ' + p.amt + ' · ' + C(p.c).client; }
+    else if (t === 'pay.uncollect') { need(u, 'edit'); const p = P(b.id); p.st = p.m === 'chq' ? 'safe' : 'wait'; ['cdate', 'cacc', 'rcpt', 'cby', 'cat', 'tr'].forEach(k => delete p[k]); d = 'تراجع عن تحصيل ' + p.amt + ' · ' + C(p.c).client; }
     else if (t === 'pay.status') { need(u, 'edit'); const p = P(b.id); if (p.st === 'done' || !['safe', 'wait', 'bounced'].includes(b.st)) bad('حالة غير صحيحة'); p.st = b.st; d = 'تغيير حالة دفعة ' + C(p.c).client + ' إلى ' + b.st; }
     else if (t === 'pay.save') {
       need(u, 'edit');
@@ -255,6 +273,42 @@ async function op(u, b) {
       if (!RS.includes(b.st)) bad('حالة غير صحيحة');
       Object.assign(q, { st: b.st, reply: str(b.reply, 1000), uat: at, uby: u.name }); clean(q);
       d = 'تحديث طلب #' + q.id + ' إلى ' + b.st;
+    } else if (t === 'tr.add') {
+      need(u, 'treasury');
+      const amt = Math.round(+b.amt * 100) / 100, desc = str(b.desc, 200);
+      if (!TRK.includes(b.k) || !(amt > 0)) bad('بيانات القيد غير مكتملة');
+      if (!isDate(b.date) || b.date > T) bad('تاريخ القيد غير صحيح');
+      if (b.date < trConf(m).start) bad('التاريخ قبل بداية حساب الخزنة');
+      if (!desc) bad('البيان مطلوب');
+      const cc = b.k === 'exp' ? (ccList(m).find(x => x.id === b.cc && !x.off) || bad('اختار مركز التكلفة')) : null;
+      m.seq.tr = (m.seq.tr || 0) + 1;
+      const e = clean({ id: m.seq.tr, date: b.date, k: b.k, amt, desc, cc: cc ? cc.id : '', who: str(b.who, 80), ref: str(b.ref, 40), by: u.name, at });
+      if (doc) e.docs = [doc];
+      m.tr = (m.tr || []).concat(e);
+      d = (b.k === 'in' ? 'وارد للخزنة ' : b.k === 'dep' ? 'إيداع/تحويل من الخزنة ' : 'مصروف ') + amt + ' · ' + desc + (cc ? ' · ' + cc.name : '');
+    } else if (t === 'tr.del') {
+      need(u, 'treasury'); need(u, 'edit');
+      const e = (m.tr || []).find(x => x.id === +b.id) || bad('القيد غير موجود', 404);
+      m.tr = m.tr.filter(x => x !== e);
+      d = 'حذف قيد خزنة ' + e.amt + ' · ' + e.desc;
+    } else if (t === 'cc.save') {
+      need(u, 'treasury');
+      const name = str(b.name, 60), l = ccList(m).map(x => Object.assign({}, x));
+      if (!name) bad('اسم مركز التكلفة مطلوب');
+      if (l.some(x => x.name === name && x.id !== b.id)) bad('الاسم ده موجود بالفعل');
+      if (b.id) {
+        if (u.role !== 'admin') bad('تعديل مراكز التكلفة للأدمن فقط', 403);
+        const x = l.find(z => z.id === b.id) || bad('مركز التكلفة غير موجود', 404);
+        x.name = name; if (b.off) x.off = true; else delete x.off;
+      } else l.push({ id: 'cc' + rid(6), name });
+      m.ccs = l;
+      d = (b.id ? 'تعديل' : 'إضافة') + ' مركز تكلفة: ' + name + (b.off ? ' (موقوف)' : '');
+    } else if (t === 'tr.conf') {
+      if (u.role !== 'admin') bad('للأدمن فقط', 403);
+      const open = Math.round(+b.open * 100) / 100;
+      if (!isDate(b.start) || b.start > T || !isFinite(open)) bad('بيانات غير صحيحة');
+      m.trc = { start: b.start, open };
+      d = 'ضبط الخزنة: رصيد أول المدة ' + open + ' بتاريخ ' + b.start;
     } else if (t === 'addprojects') {
       if (u.role !== 'admin') bad('للأدمن فقط', 403);
       const add = require('../data/projects.json'), ids = add.projects.map(p => p.id);
@@ -435,7 +489,8 @@ module.exports = async (req, res) => {
     if (r === 'user') { await userOp(u, b); return send(200, view(forClient((await store.read(MAIN)).v, q), u, await loadUsers())); }
     if (r === 'doc') {
       const k = q.get('k') || '', m = (await store.read(MAIN)).v || empty();
-      if (!view(m, u, us).payments.some(p => (p.docs || []).some(d => d.k === k))) bad('غير موجود', 404);
+      const has = x => (x.docs || []).some(d => d.k === k);
+      if (!view(m, u, us).payments.some(has) && !(can(u, 'treasury') && (m.tr || []).some(has))) bad('غير موجود', 404);
       const f = await store.getFile(k); if (!f) bad('غير موجود', 404);
       res.statusCode = 200; res.setHeader('Content-Type', f.type); res.setHeader('X-Content-Type-Options', 'nosniff'); return res.end(f.buf);
     }
