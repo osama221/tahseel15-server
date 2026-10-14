@@ -111,6 +111,8 @@ async function login(b) {
 /* ---------- treasury ---------- */
 // The cash balance = opening balance + cash collections + other cash in − expenses − cash deposited to the bank,
 // counting only movements on or after the treasury start date (older cash collections from the sheets are not in the box).
+// Added to the revision the phones see: raising it makes every phone reload the full data once (after new data such as the treasury is added to the view).
+const DATA_FMT = 1e6;
 const TR_START = '2026-10-15', TRK = ['in', 'exp', 'dep'];
 const isCash = p => p.st === 'done' && !!p.cdate && (!!p.tr || /cash|كاش|نقد|خزن/i.test(p.cacc || ''));
 const trConf = m => Object.assign({ start: TR_START, open: 0 }, m.trc || {}, { set: !!m.trc });
@@ -141,7 +143,7 @@ function view(m, u, us) {
   const seen = {}; pays.forEach(p => seen[p.c] = 1);
   const strip = c => { const o = Object.assign({}, c, { proj: projOf(c) }); if (!contact) delete o.phone; if (!reqs) delete o.ptok; return o; };
   const cons = m.contracts.filter(c => cm[c.id] && (all || seen[c.id])).map(strip);
-  const out = { rev: m.rev, today: T, me: pub(u), empty: !m.contracts.length, contracts: cons, payments: pays,
+  const out = { rev: (m.rev || 0) + DATA_FMT, today: T, me: pub(u), empty: !m.contracts.length, contracts: cons, payments: pays,
     projects: projects(m).filter(p => inScope(u, { proj: p.id })),
     followups: contact || all ? m.followups.filter(f => cm[f.c] && (all || seen[f.c])) : [],
     requests: reqs ? m.requests.filter(q => cm[q.c]) : [] };
@@ -474,7 +476,7 @@ module.exports = async (req, res) => {
       let m = (await store.read(MAIN)).v;
       if (u.role === 'admin' && q.get('v') && pendingUpdates(m).length) m = await applyUpdates();
       // unchanged since the phone's copy (same revision, same day): skip resending the whole dataset
-      if (m && q.get('rev') && +q.get('rev') === m.rev && q.get('day') === today()) return send(200, { same: true, me: pub(u), nusers: us.users.length });
+      if (m && q.get('rev') && +q.get('rev') === (m.rev || 0) + DATA_FMT && q.get('day') === today()) return send(200, { same: true, me: pub(u), nusers: us.users.length });
       return send(200, view(forClient(m, q), u, us));
     }
     if (r === 'feed') {   // collections recorded by other users since a given time (polled by the phones for notifications)
