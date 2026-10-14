@@ -513,27 +513,67 @@ function bMoves(id){var T=D.tr,b=bkM()[id],bm=bkM(),cc=trCC();if(!b)return [];
    .concat(T.bt.filter(function(e){return e.k==='xfer'&&e.to===id}).map(function(e){return {bt:e,date:e.date,k:'in',amt:+e.amt,at:e.at,desc:'تحويل من '+((bm[e.bank]||{}).name||'')+' · '+e.desc,sub:e.by}}));
   return mv.filter(function(x){return x.date>=b.start}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||'')<(b.at||'')?-1:1})}
 function bBal(id){var b=bkM()[id];return (b?+b.open||0:0)+bMoves(id).reduce(function(a,x){return a+sg(x)},0)}
+var TBP='y',TBF='',TBT='',TBM='';
+function bCat(x,id){if(x.auto)return 'تحصيلات عملاء';if(x.tr)return 'إيداع من الخزنة';var e=x.bt;if(!e)return 'أخرى';
+  if(e.k==='xfer')return e.to===id?'تحويل من حساب تاني':'تحويل لحساب تاني';return {in:'إيداعات / وارد آخر',exp:'مصروفات',out:'صرف / تحويل خارج',wd:'سحب للخزنة'}[e.k]||'أخرى'}
+function bRange(){var y=TODAY.slice(0,4),m=TODAY.slice(0,7);
+  if(TBM)return [TBM+'-01',TBM+'-31'];
+  if(TBP==='y')return [addDays(TODAY,-364),TODAY];
+  if(TBP==='cy')return [y+'-01-01',TODAY];
+  if(TBP==='q')return [addDays(TODAY,-89),TODAY];
+  if(TBP==='m')return [m+'-01',TODAY];
+  if(TBP==='pm'){var p=pprev(m,'m');return [p+'-01',p+'-31']}
+  if(TBP==='c')return [TBF||'0000',TBT||'9999'];
+  return ['0000','9999']}
+function bPeriodBar(){var h='<div class="chips">'+[['y','آخر سنة'],['cy','السنة دي'],['q','آخر 3 شهور'],['m','الشهر ده'],['pm','الشهر اللي فات'],['a','الكل'],['c','فترة محددة']].map(function(x){return '<button class="chip '+(TBP===x[0]&&!TBM?'on':'')+'" onclick="TBM=\'\';setTR(\'TBP\',\''+x[0]+'\')">'+x[1]+'</button>'}).join('')+'</div>';
+  if(TBP==='c'&&!TBM)h+='<div class="grid2" style="grid-template-columns:1fr 1fr"><div><label class="f">من</label><input class="inp" type="date" value="'+TBF+'" onchange="setTR(\'TBF\',this.value)"></div><div><label class="f">إلى</label><input class="inp" type="date" value="'+TBT+'" onchange="setTR(\'TBT\',this.value)"></div></div>';
+  if(TBM)h+='<div class="btns" style="margin-top:0"><button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="setTR(\'TBM\',\'\')">→ رجوع للفترة كلها</button></div>';
+  return h}
+function bStat(id,r){var b=bkM()[id],bal=+b.open||0,o={open:null,inn:0,out:0,n:0,rows:[],mon:{},cat:{}};
+  bMoves(id).forEach(function(x){if(x.date<r[0]){bal+=sg(x);return}if(o.open===null)o.open=bal;if(x.date>r[1])return;bal+=sg(x);o.n++;
+    if(x.k==='in')o.inn+=x.amt;else o.out+=x.amt;o.rows.push({x:x,bal:bal});
+    var mm=x.date.slice(0,7),a=o.mon[mm]||(o.mon[mm]={inn:0,out:0,bal:0,n:0});if(x.k==='in')a.inn+=x.amt;else a.out+=x.amt;a.bal=bal;a.n++;
+    var c=bCat(x,id),k=o.cat[c]||(o.cat[c]={inn:0,out:0,n:0});if(x.k==='in')k.inn+=x.amt;else k.out+=x.amt;k.n++});
+  if(o.open===null)o.open=bal;o.close=o.open+o.inn-o.out;return o}
+function sumCard(s,lbl){return '<div class="grid2"><div class="kpi"><div class="l"><span>رصيد أول الفترة</span></div><div class="v">'+money(s.open)+'</div></div><div class="kpi"><div class="l"><span>رصيد آخر الفترة</span></div><div class="v">'+money(s.close)+'</div></div>'
+  +'<div class="kpi"><div class="l"><span>إجمالي الوارد</span></div><div class="v" style="color:#1f9d55">'+money(s.inn)+'</div></div><div class="kpi"><div class="l"><span>إجمالي المنصرف</span></div><div class="v" style="color:var(--red2)">'+money(s.out)+'</div></div></div>'
+  +'<p class="note" style="margin-top:6px">'+lbl+' · '+s.n+' حركة · صافي الحركة '+(s.inn-s.out<0?'−':'+')+Math.round(Math.abs(s.inn-s.out)).toLocaleString('en-US')+'</p>'}
+function rLabel(r){return (r[0]==='0000'?'من البداية':fd(r[0]))+' ← '+(r[1]==='9999'?'لحد النهارده':fd(r[1]>TODAY?TODAY:r[1]))}
 function vBanks(){
   if(TRB&&bkM()[TRB])return vBank(TRB);
-  var l=D.tr.banks||[],h='';
-  if(!l.length)h+='<div class="empty">لسه مفيش حسابات بنك'+(admin()?' — ضيف أول حساب':'')+'</div>';
-  else{var tot=0;h+='<div class="list">'+l.map(function(b){var s=bBal(b.id);if(!b.off)tot+=s;return '<button class="row" onclick="setTR(\'TRB\',\''+b.id+'\')"><span class="m"><div class="n">'+esc(b.name)+'</div><div class="u">'+(b.no?'<span class="num">'+esc(b.no)+'</span> · ':'')+'من '+fd(b.start)+'</div></span><span class="a"><b style="'+(s<0?'color:var(--red2)':'')+'">'+money(s)+'</b>'+(b.off?'<span class="tag cancelled">موقوف</span>':'')+'</span></button>'}).join('')+'</div>';
-    h='<div class="card cen"><div class="note" style="margin:0">إجمالي أرصدة البنوك</div><div class="big">'+money(tot)+' <small style="font-size:14px;font-weight:600">ج.م</small></div></div>'+h}
+  var l=D.tr.banks||[],h='',r=bRange();
+  if(!l.length){h+='<div class="empty">لسه مفيش حسابات بنك'+(admin()?' — ضيف أول حساب':'')+'</div>'}
+  else{
+    var tot=0;l.forEach(function(b){if(!b.off)tot+=bBal(b.id)});
+    h+='<div class="card cen"><div class="note" style="margin:0">إجمالي أرصدة البنوك النهارده</div><div class="big">'+money(tot)+' <small style="font-size:14px;font-weight:600">ج.م</small></div></div>';
+    h+='<div class="sec">مجمل حركة الحسابات</div>'+bPeriodBar();
+    var S={open:0,close:0,inn:0,out:0,n:0},per=l.map(function(b){var s=bStat(b.id,r);['open','close','inn','out','n'].forEach(function(k){S[k]+=s[k]});return {b:b,s:s}});
+    h+=sumCard(S,rLabel(r)+' · كل الحسابات');
+    h+='<div class="list">'+per.map(function(o){var b=o.b,s=o.s;return '<button class="row" style="display:block" onclick="setTR(\'TRB\',\''+b.id+'\')"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(b.name)+(b.off?' <span class="tag cancelled">موقوف</span>':'')+'</b><b class="num">'+Math.round(bBal(b.id)).toLocaleString('en-US')+'</b></div>'
+      +'<div class="u" style="display:flex;justify-content:space-between;gap:6px;margin-top:4px"><span>أول الفترة <span class="num">'+Math.round(s.open).toLocaleString('en-US')+'</span></span><span>آخر الفترة <span class="num">'+Math.round(s.close).toLocaleString('en-US')+'</span></span></div>'
+      +'<div class="u" style="display:flex;justify-content:space-between;gap:6px;margin-top:2px"><span style="color:#1f9d55">وارد +<span class="num">'+Math.round(s.inn).toLocaleString('en-US')+'</span></span><span style="color:var(--red2)">منصرف −<span class="num">'+Math.round(s.out).toLocaleString('en-US')+'</span></span></div></button>'}).join('')+'</div>';
+  }
   if(admin())h+='<div class="btns"><button class="btn k sm" onclick="bankForm()">+ حساب بنك</button></div>';
   h+='<p class="note">التحصيلات اللي حساب التحصيل بتاعها بنفس اسم الحساب (أو أي اسم تاني متسجل له) بتنزل في كشف الحساب لوحدها، وكمان الإيداعات من الخزنة.</p>';
   return h;
 }
 function vBank(id){
-  var b=bkM()[id],mv=bMoves(id),bal=+b.open||0,h='';
-  var rows=mv.map(function(x){bal+=sg(x);return {x:x,bal:bal}}).reverse();
-  h+='<div class="btns" style="margin-top:0"><button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="setTR(\'TRB\',\'\')">→ كل الحسابات</button>'+(admin()?'<button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="bankForm(\''+id+'\')">تعديل الحساب</button>':'')+'</div>';
-  h+='<div class="card cen"><div class="note" style="margin:0">'+esc(b.name)+(b.no?' · <span class="num">'+esc(b.no)+'</span>':'')+'</div><div class="big" style="'+(bal<0?'color:var(--red2)':'')+'">'+money(bal)+' <small style="font-size:14px;font-weight:600">ج.م</small></div><div class="note" style="margin:0">رصيد أول المدة '+Math.round(+b.open||0).toLocaleString('en-US')+' بتاريخ '+fd(b.start)+'</div>'+(b.stmt?'<div class="note" style="margin:0">مطابق لكشف البنك حتى '+fd(b.stmt)+' — تحصيلات التطبيق بتتحسب بعد التاريخ ده</div>':'')+'</div>';
+  var b=bkM()[id],r=bRange(),s=bStat(id,r),h='',now=bBal(id);
+  h+='<div class="btns" style="margin-top:0"><button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="TBM=\'\';setTR(\'TRB\',\'\')">→ كل الحسابات</button>'+(admin()?'<button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="bankForm(\''+id+'\')">تعديل الحساب</button>':'')+'</div>';
+  h+='<div class="card cen"><div class="note" style="margin:0">'+esc(b.name)+(b.no?' · <span class="num">'+esc(b.no)+'</span>':'')+'</div><div class="big" style="'+(now<0?'color:var(--red2)':'')+'">'+money(now)+' <small style="font-size:14px;font-weight:600">ج.م</small></div><div class="note" style="margin:0">رصيد أول المدة '+Math.round(+b.open||0).toLocaleString('en-US')+' بتاريخ '+fd(b.start)+'</div>'+(b.stmt?'<div class="note" style="margin:0">مطابق لكشف البنك حتى '+fd(b.stmt)+' — تحصيلات التطبيق بتتحسب بعد التاريخ ده</div>':'')+'</div>';
   if(!b.off)h+='<div class="btns"><button class="btn k sm" onclick="btForm(\''+id+'\',\'in\')">+ إيداع</button><button class="btn sm" onclick="btForm(\''+id+'\',\'exp\')">− صرف</button></div><div class="btns"><button class="btn g sm" onclick="btForm(\''+id+'\',\'out\')">تحويل خارج</button><button class="btn g sm" onclick="btForm(\''+id+'\',\'wd\')">سحب للخزنة</button><button class="btn g sm" onclick="btForm(\''+id+'\',\'xfer\')">بين الحسابات</button></div>';
-  h+='<div class="gh"><span>كشف الحساب</span><span>'+mv.length+' حركة</span></div>';
-  if(!rows.length)return h+'<div class="empty">لا توجد حركات بعد</div>';
+  h+='<div class="sec">كشف الحساب</div>'+bPeriodBar()+sumCard(s,TBM?fm(TBM):rLabel(r));
+  var ms=Object.keys(s.mon).sort();
+  if(ms.length>1)h+='<div class="sec">حسب الشهر</div><div class="card">'+'<div class="mrow" style="grid-template-columns:80px 1fr 1fr 1fr;font-weight:700;font-size:12px;color:#777"><span>الشهر</span><span>وارد</span><span>منصرف</span><span>الرصيد</span></div>'+ms.reverse().map(function(k){var a=s.mon[k];
+    return '<button class="mrow" style="grid-template-columns:80px 1fr 1fr 1fr" onclick="setTR(\'TBM\',\''+k+'\')"><span>'+MON[+k.slice(5,7)-1]+' '+k.slice(2,4)+'</span><span class="num" style="color:#1f9d55">'+Math.round(a.inn).toLocaleString('en-US')+'</span><span class="num" style="color:var(--red2)">'+Math.round(a.out).toLocaleString('en-US')+'</span><b class="num">'+Math.round(a.bal).toLocaleString('en-US')+'</b></button>'}).join('')+'</div>';
+  var cs=Object.keys(s.cat).sort(function(a,b){return (s.cat[b].inn+s.cat[b].out)-(s.cat[a].inn+s.cat[a].out)});
+  if(cs.length)h+='<div class="sec">حسب نوع الحركة</div><div class="card">'+cs.map(function(c){var k=s.cat[c];return kv(esc(c)+' <small>('+k.n+')</small>',(k.inn?'<span style="color:#1f9d55">+'+money(k.inn)+'</span> ':'')+(k.out?'<span style="color:var(--red2)">−'+money(k.out)+'</span>':''))}).join('')+'</div>';
+  var rows=s.rows.slice().reverse();
+  h+='<div class="gh"><span>الحركات</span><span>'+rows.length+' حركة</span></div>';
+  if(!rows.length)return h+'<div class="empty">لا توجد حركات في الفترة دي</div>';
   h+='<div class="list">'+rows.slice(0,300).map(function(r){var x=r.x,on=x.auto?'openP('+x.p+')':x.tr?'trOpen('+x.tr.id+')':'btOpen('+x.bt.id+')';
-    return '<button class="row" onclick="'+on+'"><span class="d"><b class="num">'+(+x.date.slice(8,10))+'</b><span>'+MON[+x.date.slice(5,7)-1]+'</span></span><span class="m"><div class="n">'+esc(x.desc)+'</div><div class="u">'+esc(x.sub)+'</div></span><span class="a"><b style="color:'+(x.k==='in'?'#1f9d55':'var(--red2)')+'">'+(x.k==='in'?'+':'−')+money(x.amt)+'</b><small class="num" style="color:#777">رصيد '+Math.round(r.bal).toLocaleString('en-US')+'</small></span></button>'}).join('')+'</div>'+(rows.length>300?'<p class="note">معروض آخر 300 حركة — الكشف الكامل في تصدير Excel.</p>':'');
-  if(can('export'))h+='<div class="btns"><button class="btn g sm" onclick="bankExport(\''+id+'\')">تصدير كشف الحساب Excel</button></div>';
+    return '<button class="row" onclick="'+on+'"><span class="d"><b class="num">'+(+x.date.slice(8,10))+'</b><span>'+MON[+x.date.slice(5,7)-1]+'</span></span><span class="m"><div class="n">'+esc(x.desc)+'</div><div class="u">'+esc(x.sub)+'</div></span><span class="a"><b style="color:'+(x.k==='in'?'#1f9d55':'var(--red2)')+'">'+(x.k==='in'?'+':'−')+money(x.amt)+'</b><small class="num" style="color:#777">رصيد '+Math.round(r.bal).toLocaleString('en-US')+'</small></span></button>'}).join('')+'</div>'+(rows.length>300?'<p class="note">معروض آخر 300 حركة في الفترة — اختار شهر أو صدّر Excel للكشف الكامل.</p>':'');
+  if(can('export'))h+='<div class="btns"><button class="btn g sm" onclick="bankExport(\''+id+'\')">تصدير كشف الفترة Excel</button></div>';
   return h;
 }
 function bankOpts(sel,skip){return (D.tr.banks||[]).filter(function(b){return !b.off&&b.id!==skip}).map(function(b){return '<option value="'+b.id+'"'+(b.id===sel?' selected':'')+'>'+esc(b.name)+'</option>'}).join('')}
@@ -576,9 +616,12 @@ function btOpen(id){sheet('حركة بنك',function(){var e=(D.tr.bt||[]).filte
   if(can('edit'))h+='<div class="btns"><button class="btn g sm" onclick="back();btForm(\''+e.bank+'\',\''+e.k+'\','+e.id+')">تعديل الحركة</button><button class="btn dng sm" onclick="btDel('+e.id+')">حذف الحركة</button></div>';
   return h})}
 function btDel(id){confirmBox('حذف الحركة دي؟','حذف',function(){op({t:'bt.del',id:id},'تم حذف الحركة').then(function(){back();render()},function(){})})}
-function bankRows(id){var b=bkM()[id],bal=+b.open||0,r=[['التاريخ','الوصف','التفاصيل','وارد','منصرف','الرصيد']];r.push([b.start,'رصيد أول المدة','','','',bal]);
-  bMoves(id).forEach(function(x){bal+=sg(x);r.push([x.date,x.desc,x.sub,x.k==='in'?x.amt:'',x.k!=='in'?x.amt:'',Math.round(bal*100)/100])});return r}
-function bankExport(id){var b=bkM()[id];N.exportXlsx('كشف-حساب-'+b.name.replace(/[\\\/:*?"<>|]/g,'')+'-'+TODAY+'.xlsx',JSON.stringify({sheets:[{name:'كشف الحساب',rows:bankRows(id)}]}))}
+function bankRows(id,r){r=r||['0000','9999'];var s=bStat(id,r),rows=[['التاريخ','نوع الحركة','الوصف','التفاصيل','وارد','منصرف','الرصيد']];rows.push([r[0]==='0000'?bkM()[id].start:r[0],'رصيد أول الفترة','','','','',Math.round(s.open*100)/100]);
+  s.rows.forEach(function(o){var x=o.x;rows.push([x.date,bCat(x,id),x.desc,x.sub,x.k==='in'?x.amt:'',x.k!=='in'?x.amt:'',Math.round(o.bal*100)/100])});
+  rows.push(['','الإجمالي','','',Math.round(s.inn*100)/100,Math.round(s.out*100)/100,Math.round(s.close*100)/100]);return rows}
+function bankExport(id){var b=bkM()[id],r=bRange(),s=bStat(id,r),m=[['الشهر','وارد','منصرف','الرصيد آخر الشهر','عدد الحركات']];Object.keys(s.mon).sort().forEach(function(k){var a=s.mon[k];m.push([k,a.inn,a.out,Math.round(a.bal*100)/100,a.n])});
+  var c=[['نوع الحركة','وارد','منصرف','عدد']];Object.keys(s.cat).forEach(function(k){var a=s.cat[k];c.push([k,a.inn,a.out,a.n])});
+  N.exportXlsx('كشف-حساب-'+b.name.replace(/[\\\/:*?"<>|]/g,'')+'-'+r[0].replace('0000','start')+'-'+(r[1]>TODAY?TODAY:r[1])+'.xlsx',JSON.stringify({sheets:[{name:'كشف الحساب',rows:bankRows(id,r)},{name:'حسب الشهر',rows:m},{name:'حسب نوع الحركة',rows:c}]}))}
 function expList(r){var bm=bkM();
   return D.tr.items.filter(function(e){return e.k==='exp'}).map(function(e){return Object.assign({src:'tr',srcn:'الخزنة'},e)})
    .concat((D.tr.bt||[]).filter(function(e){return e.k==='exp'}).map(function(e){return Object.assign({src:'bt',srcn:(bm[e.bank]||{}).name||'بنك'},e)}))
