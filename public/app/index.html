@@ -680,17 +680,23 @@ function collectForm(id){
   var p=P(id);
   sheet('تسجيل التحصيل','<div class="card"><div class="cen note">'+esc(CM[p.c].client)+' · '+TYPE[p.type]+'</div>'+photoBox()
   +'<label class="f">المبلغ المحصّل</label><input class="inp" id="c_amt" type="number" inputmode="decimal" value="'+p.amt+'">'
-  +'<label class="f">تاريخ التحصيل</label><input class="inp" id="c_date" type="date" max="'+TODAY+'" value="'+TODAY+'">'
-  +'<label class="f">حساب التحصيل</label><input class="inp" id="c_acc" list="accs" placeholder="مثال: raya 203 / cash"><datalist id="accs">'+(D.tr?(D.tr.banks||[]).filter(function(b){return !b.off}).map(function(b){return b.name}):[]).concat(accts()).map(function(a){return '<option value="'+esc(a)+'">'}).join('')+'</datalist>'
-  +'<label class="sw" style="margin-top:12px"><div>استلام نقدي (كاش)<small>المبلغ يدخل رصيد الخزنة</small></div><input type="checkbox" id="c_cash" style="width:24px;height:24px;accent-color:#c8102e" onchange="var a=document.getElementById(\'c_acc\');if(this.checked&&!a.value)a.value=\'cash\'"></label>'
+  +'<label class="f">تاريخ التحصيل</label><input class="inp" id="c_date" type="date" max="'+TODAY+'" value="'+TODAY+'" onchange="cToChg()">'
+  +'<label class="f">استلام التحصيل في</label><select class="inp" id="c_to" onchange="cToChg()"><option value="">اختر الخزنة أو البنك</option><option value="cash">الخزنة (كاش)</option>'+(D.bks||[]).map(function(b){return '<option value="'+b.id+'">'+esc(b.name)+'</option>'}).join('')+'<option value="other">حساب تاني (اكتبه)</option></select>'
+  +'<div id="c_accw" style="display:none"><input class="inp" id="c_acc" list="accs" placeholder="اسم الحساب" style="margin-top:6px"><datalist id="accs">'+accts().map(function(a){return '<option value="'+esc(a)+'">'}).join('')+'</datalist></div><p class="note" id="c_tonote" style="display:none"></p>'
   +'<label class="f">رقم الإيصال (اختياري)</label><input class="inp" id="c_rc">'
   +'<p class="note">لو المبلغ أقل من قيمة الدفعة، الباقي يتسجّل كدفعة مستقلة بنفس تاريخ الاستحقاق.</p></div><div class="btns"><button class="btn" onclick="collect('+id+')">حفظ التحصيل</button></div>');
 }
+function cToChg(){var to=V('c_to'),w=document.getElementById('c_accw'),n=document.getElementById('c_tonote'),bk=(D.bks||[]).filter(function(b){return b.id===to})[0];
+  w.style.display=to==='other'?'block':'none';
+  var msg=to==='cash'?'المبلغ هيدخل رصيد الخزنة.':bk?(bk.stmt&&(V('c_date')||TODAY)<=bk.stmt?'كشف البنك المرفوع مغطي التاريخ ده، فالمبلغ مش هيتضاف لرصيد الحساب تاني (موجود في الكشف).':'المبلغ هيتسجّل في كشف حساب '+esc(bk.name)+'.'):'';
+  n.style.display=msg?'block':'none';n.innerHTML=msg}
 function collect(id){
   var p=P(id),amt=parseFloat(V('c_amt'));
   if(!PHOTO){toast('لازم ترفق صورة مستند التحصيل');return}
   if(!(amt>0)||amt>p.amt){toast('المبلغ غير صحيح');return}
-  op({t:'pay.collect',id:id,amt:amt,cdate:V('c_date')||TODAY,cacc:V('c_acc'),rcpt:V('c_rc'),cash:(document.getElementById('c_cash')||{}).checked?1:undefined,photo:PHOTO},'تم تسجيل التحصيل').then(function(){PHOTO='';back();refresh()},function(){});
+  var to=V('c_to'),bk=(D.bks||[]).filter(function(b){return b.id===to})[0],acc=to==='cash'?'cash':bk?bk.name:V('c_acc');
+  if(!to){toast('اختار التحصيل اتستلم في الخزنة ولا أنهي بنك');return}if(to==='other'&&!acc){toast('اكتب اسم الحساب');return}
+  op({t:'pay.collect',id:id,amt:amt,cdate:V('c_date')||TODAY,cacc:acc,rcpt:V('c_rc'),cash:to==='cash'?1:undefined,bank:bk?bk.id:undefined,photo:PHOTO},'تم تسجيل التحصيل').then(function(){PHOTO='';back();refresh()},function(){});
 }
 function docForm(id){sheet('إضافة مستند','<div class="card">'+photoBox()+'</div><div class="btns"><button class="btn" onclick="if(!PHOTO){toast(\'اختر الصورة أولاً\')}else op({t:\'pay.doc\',id:'+id+',photo:PHOTO},\'تم إرفاق المستند\').then(function(){back();refresh()},function(){})">حفظ</button></div>')}
 function uncollect(id){confirmBox('إرجاع الدفعة للمستحقات؟','تراجع',function(){op({t:'pay.uncollect',id:id},'رجعت الدفعة للمستحقات').then(refresh,function(){})})}

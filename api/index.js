@@ -166,6 +166,7 @@ function view(m, u, us) {
     requests: reqs ? m.requests.filter(q => cm[q.c]) : [] };
   if (reqs && !all) out.cidx = m.contracts.filter(c => cm[c.id] && c.st === 'active').map(c => ({ id: c.id, client: c.client, unit: c.unit, proj: projOf(c) }));
   if (can(u, 'treasury')) out.tr = trView(m);
+  if (can(u, 'collect')) out.bks = banks(m).filter(b => !b.off).map(b => ({ id: b.id, name: b.name, stmt: b.stmt || '' }));
   if (u.role === 'admin') { out.users = us.users.map(pub); out.log = m.log.slice(-200).reverse(); out.canAdd = NEW_PROJECTS.some(id => !projects(m).some(p => p.id === id)); }
   return out;
 }
