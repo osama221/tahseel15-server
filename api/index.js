@@ -185,7 +185,9 @@ const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data
   { id: 'raya-203-2025-2026', run: m => importStatement(m, require('../data/bank-raya203-2025-2026.json')) },
   { id: 'raya-203-2026-10-15', run: m => importStatement(m, require('../data/bank-raya203-202610.json')) },
   { id: 'ohm-837-2026-10-15', run: m => importStatement(m, require('../data/bank-ohm837-202610.json')) },
-  { id: 'link-ohm-raya-2026-10', run: m => linkTransfers(m, [['ohm837-202609-018', 'raya203-1775'], ['ohm837-202610-0009', 'raya203-202610-0006']]) }];
+  { id: 'link-ohm-raya-2026-10', run: m => linkTransfers(m, [['ohm837-202609-018', 'raya203-1775'], ['ohm837-202610-0009', 'raya203-202610-0006']])  },
+  { id: 'ohm-837-2026-01-08', run: m => importStatement(m, require('../data/bank-ohm837-2026-01-08.json')) },
+  { id: 'link-ohm-raya-2026-01-08', run: m => linkTransfers(m, [["raya203-1008", "ohm837-2026h1-0043"], ["raya203-1021", "ohm837-2026h1-0060"], ["raya203-1025", "ohm837-2026h1-0062"], ["ohm837-2026h1-0224", "raya203-1164"], ["ohm837-2026h1-0325", "raya203-1227"], ["ohm837-2026h1-0414", "raya203-1296"], ["ohm837-2026h1-0455", "raya203-1326"], ["ohm837-2026h1-0458", "raya203-1332"], ["ohm837-2026h1-0460", "raya203-1337"], ["ohm837-2026h1-0477", "raya203-1364"], ["ohm837-2026h1-0482", "raya203-1371"], ["ohm837-2026h1-0748", "raya203-1640"], ["raya203-1733", "ohm837-2026h1-0815"]]) }];
 // The same transfer seen in both statements (out of one account, into the other) becomes one transfer between the two accounts.
 function linkTransfers(m, pairs) {
   const by = {}; (m.bt || []).forEach(e => { if (e.src) by[e.src] = e; });
@@ -208,7 +210,10 @@ function importStatement(m, s) {
   let bk = l.find(x => [x.name].concat(x.keys || []).some(k => s.match.includes(nk(k))) || x.no === s.no);
   if (!bk) { bk = { id: 'bk' + rid(6), name: s.name, keys: [] }; l.push(bk); }
   if (s.append) bk.stmt = bk.stmt && bk.stmt > s.end ? bk.stmt : s.end;   // a later statement continuing the same account
-  else {
+  else if (s.prepend) {   // an earlier period of an account already imported: it now starts earlier
+    Object.assign(bk, { no: s.no, start: s.start, open: s.open, stmt: bk.stmt && bk.stmt > s.end ? bk.stmt : s.end });
+    bk.keys = [...new Set((bk.keys || []).concat(s.keys).filter(k => nk(k) !== nk(bk.name)))];
+  } else {
     bk.keys = [...new Set((bk.keys || []).concat(s.keys).filter(k => nk(k) !== nk(bk.name)))];
     Object.assign(bk, { no: s.no, start: s.start, open: s.open, stmt: s.end });
   }
