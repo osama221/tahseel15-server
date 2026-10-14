@@ -180,7 +180,8 @@ function forClient(m, q) {
 
 // Sheet updates prepared on the server. Each is applied once, the next time an admin opens the app.
 const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data/update-pk-20261004.json') },
-  { id: 'ohm-837-2026-09', run: m => importStatement(m, require('../data/bank-ohm837-202609.json')) }];
+  { id: 'ohm-837-2026-09', run: m => importStatement(m, require('../data/bank-ohm837-202609.json')) },
+  { id: 'raya-203-2025-2026', run: m => importStatement(m, require('../data/bank-raya203-2025-2026.json')) }];
 // A bank statement: sets the account's opening balance at the statement start and adds every line as a bank movement.
 // Collections recorded in the app up to the statement end are then not counted again (the statement already has them).
 function importStatement(m, s) {
@@ -194,7 +195,7 @@ function importStatement(m, s) {
   if (s.cc && !ccList(m).some(c => c.id === s.cc.id)) m.ccs = ccList(m).concat(s.cc);
   const have = new Set((m.bt || []).map(e => e.src).filter(Boolean));
   let n = 0;
-  m.bt = (m.bt || []).concat(s.tx.filter(t => !have.has(t.src)).map(t => { n++; return clean(Object.assign({ id: (m.seq.bt = (m.seq.bt || 0) + 1), bank: bk.id, by: 'كشف البنك', at: t.date + 'T12:00:00.000Z' }, t)); }));
+  m.bt = (m.bt || []).concat(s.tx.filter(t => !have.has(t.src)).map((t, i) => { n++; return clean(Object.assign({ id: (m.seq.bt = (m.seq.bt || 0) + 1), bank: bk.id, by: 'كشف البنك', at: new Date(Date.parse(t.date + 'T06:00:00Z') + i * 1000).toISOString() }, t)); }));
   return 'استيراد كشف ' + bk.name + ' من ' + s.start + ' إلى ' + s.end + ': ' + n + ' حركة · رصيد أول ' + s.open + ' · رصيد آخر ' + s.close;
 }
 const pendingUpdates = m => !m ? [] : UPDATES.filter(x => !(m.applied || []).includes(x.id) && (!x.need || projects(m).some(p => p.id === x.need)));
