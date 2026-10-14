@@ -183,7 +183,8 @@ function forClient(m, q) {
 const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data/update-pk-20261004.json') },
   { id: 'ohm-837-2026-09', run: m => importStatement(m, require('../data/bank-ohm837-202609.json')) },
   { id: 'raya-203-2025-2026', run: m => importStatement(m, require('../data/bank-raya203-2025-2026.json')) },
-  { id: 'raya-203-2026-10-15', run: m => importStatement(m, require('../data/bank-raya203-202610.json')) }];
+  { id: 'raya-203-2026-10-15', run: m => importStatement(m, require('../data/bank-raya203-202610.json')) },
+  { id: 'ohm-837-2026-10-15', run: m => importStatement(m, require('../data/bank-ohm837-202610.json')) }];
 // A bank statement: sets the account's opening balance at the statement start and adds every line as a bank movement.
 // Collections recorded in the app up to the statement end are then not counted again (the statement already has them).
 function importStatement(m, s) {
