@@ -181,7 +181,8 @@ function forClient(m, q) {
 // Sheet updates prepared on the server. Each is applied once, the next time an admin opens the app.
 const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data/update-pk-20261004.json') },
   { id: 'ohm-837-2026-09', run: m => importStatement(m, require('../data/bank-ohm837-202609.json')) },
-  { id: 'raya-203-2025-2026', run: m => importStatement(m, require('../data/bank-raya203-2025-2026.json')) }];
+  { id: 'raya-203-2025-2026', run: m => importStatement(m, require('../data/bank-raya203-2025-2026.json')) },
+  { id: 'raya-203-2026-10-15', run: m => importStatement(m, require('../data/bank-raya203-202610.json')) }];
 // A bank statement: sets the account's opening balance at the statement start and adds every line as a bank movement.
 // Collections recorded in the app up to the statement end are then not counted again (the statement already has them).
 function importStatement(m, s) {
@@ -189,8 +190,11 @@ function importStatement(m, s) {
   const l = banks(m).map(x => Object.assign({}, x));
   let bk = l.find(x => [x.name].concat(x.keys || []).some(k => s.match.includes(nk(k))) || x.no === s.no);
   if (!bk) { bk = { id: 'bk' + rid(6), name: s.name, keys: [] }; l.push(bk); }
-  bk.keys = [...new Set((bk.keys || []).concat(s.keys).filter(k => nk(k) !== nk(bk.name)))];
-  Object.assign(bk, { no: s.no, start: s.start, open: s.open, stmt: s.end });
+  if (s.append) bk.stmt = bk.stmt && bk.stmt > s.end ? bk.stmt : s.end;   // a later statement continuing the same account
+  else {
+    bk.keys = [...new Set((bk.keys || []).concat(s.keys).filter(k => nk(k) !== nk(bk.name)))];
+    Object.assign(bk, { no: s.no, start: s.start, open: s.open, stmt: s.end });
+  }
   m.banks = l;
   if (s.cc && !ccList(m).some(c => c.id === s.cc.id)) m.ccs = ccList(m).concat(s.cc);
   const have = new Set((m.bt || []).map(e => e.src).filter(Boolean));
