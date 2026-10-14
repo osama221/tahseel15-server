@@ -1,0 +1,1288 @@
+{
+"name": "OHM 837 - CIB",
+"no": "100060932837",
+"keys": [
+"ohm 837",
+"ohm837"
+],
+"match": [
+"ohm837",
+"100060932837",
+"ohm837cib"
+],
+"start": "2026-09-01",
+"end": "2026-09-30",
+"open": 82367.0,
+"close": 957597.0,
+"cc": {
+"id": "cc-bank",
+"name": "مصاريف بنكية"
+},
+"tx": [
+{
+"date": "2026-09-01",
+"k": "exp",
+"amt": 150.0,
+"desc": "مصاريف إدارية / شهرية للحساب",
+"who": "",
+"ref": "FT26244JY538",
+"note": "Fees Account Transfer FT26244JY538\\A01 GTS MONTHLY FEES for 100060932837",
+"cc": "cc-bank",
+"src": "ohm837-202609-000"
+},
+{
+"date": "2026-09-01",
+"k": "in",
+"amt": 107000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "AZZAM ABDELHAKIM OTHMAN",
+"ref": "FT26244H0NFF",
+"note": "IPN Inward FT26244H0NFF\\BNK PayerMobNo:00201560836336 Payer Name: AZZAM ABDELHAKIM OTHMAN IRS Instan",
+"src": "ohm837-202609-001"
+},
+{
+"date": "2026-09-01",
+"k": "in",
+"amt": 54000.0,
+"desc": "تحصيل شيك",
+"who": "CK20068500483895",
+"ref": "FT26244W5LZV",
+"note": "Account Transfer Collection FT26244W5LZV\\BNK CK20068500483895 CK20068500483895 LCO30082600030",
+"src": "ohm837-202609-002"
+},
+{
+"date": "2026-09-01",
+"k": "exp",
+"amt": 20.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK20068500483895",
+"ref": "FT26244DTKGQ",
+"note": "Account Transfer Collection FT26244DTKGQ\\BNK CK20068500483895 CK20068500483895 LCO30082600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-003"
+},
+{
+"date": "2026-09-01",
+"k": "in",
+"amt": 100000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "SAMAR ABDELAZIZ EBRAHIM",
+"ref": "FT262440B2RH",
+"note": "IPN Inward FT262440B2RH\\BNK PayerMobNo:00201560836336 Payer Name: SAMAR ABDELAZIZ EBRAHIM IRS Instan",
+"src": "ohm837-202609-004"
+},
+{
+"date": "2026-09-01",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ZEYAD MOSTAFA AHMED ALY",
+"ref": "FT26244LJ27H",
+"note": "IPN Inward FT26244LJ27H\\BNK PayerMobNo:00201280401955 Payer Name: ZEYAD MOSTAFA AHMED ALY Living Exp",
+"src": "ohm837-202609-005"
+},
+{
+"date": "2026-09-01",
+"k": "in",
+"amt": 34000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ZEYAD MOSTAFA AHMED ALY",
+"ref": "FT26244DZF9R",
+"note": "IPN Inward FT26244DZF9R\\BNK PayerMobNo:00201280401955 Payer Name: ZEYAD MOSTAFA AHMED ALY Living Exp",
+"src": "ohm837-202609-006"
+},
+{
+"date": "2026-09-02",
+"k": "in",
+"amt": 48000.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "GAMAL MOHAMED IBRAHIM FATEN GAMAL MO",
+"ref": "TT26245188JP",
+"note": "Cash Deposit TT26245188JP Branch Deposit C.I.B NEW OCTOBER BR - GAMAL MOHAMED IBRAHIM FATEN GAMAL MO",
+"src": "ohm837-202609-007"
+},
+{
+"date": "2026-09-02",
+"k": "exp",
+"amt": 20.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK18290000282341",
+"ref": "FT26245VPR5Q",
+"note": "Account Transfer Collection FT26245VPR5Q\\BNK CK18290000282341 CK18290000282341 LCO31082600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-008"
+},
+{
+"date": "2026-09-02",
+"k": "exp",
+"amt": 20.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK18290000284385",
+"ref": "FT26245Z5180",
+"note": "Account Transfer Collection FT26245Z5180\\BNK CK18290000284385 CK18290000284385 LCO31082600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-009"
+},
+{
+"date": "2026-09-02",
+"k": "exp",
+"amt": 20.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK18290000322192",
+"ref": "FT262457G9BC",
+"note": "Account Transfer Collection FT262457G9BC\\BNK CK18290000322192 CK18290000322192 LCO31082600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-010"
+},
+{
+"date": "2026-09-02",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل أونلاين وارد",
+"who": "Payment for August 2026",
+"ref": "FT262450CZV8",
+"note": "Online Transfer FT262450CZV8\\BNK - Payment for August 2026",
+"src": "ohm837-202609-011"
+},
+{
+"date": "2026-09-02",
+"k": "in",
+"amt": 61900.0,
+"desc": "تحصيل شيك",
+"who": "CK190010933391",
+"ref": "FT2624540F4H",
+"note": "Account Transfer Collection FT2624540F4H\\BNK CK190010933391 CK190010933391 LCO31082600030",
+"src": "ohm837-202609-012"
+},
+{
+"date": "2026-09-02",
+"k": "exp",
+"amt": 20.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK190010933391",
+"ref": "FT26245R1BYJ",
+"note": "Account Transfer Collection FT26245R1BYJ\\BNK CK190010933391 CK190010933391 LCO31082600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-013"
+},
+{
+"date": "2026-09-02",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحصيل شيك",
+"who": "CK3817000088331",
+"ref": "FT26245WBVSW",
+"note": "Account Transfer Collection FT26245WBVSW\\BNK CK3817000088331 CK3817000088331 LCO31082600030",
+"src": "ohm837-202609-014"
+},
+{
+"date": "2026-09-02",
+"k": "exp",
+"amt": 20.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK3817000088331",
+"ref": "FT26245KPJ0D",
+"note": "Account Transfer Collection FT26245KPJ0D\\BNK CK3817000088331 CK3817000088331 LCO31082600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-015"
+},
+{
+"date": "2026-09-02",
+"k": "in",
+"amt": 67500.0,
+"desc": "تحصيل شيك",
+"who": "CK92020200540973",
+"ref": "FT2624500V14",
+"note": "Account Transfer Collection FT2624500V14\\BNK CK92020200540973 CK92020200540973 LCO31082600590",
+"src": "ohm837-202609-016"
+},
+{
+"date": "2026-09-02",
+"k": "exp",
+"amt": 20.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK92020200540973",
+"ref": "FT26245WV52L",
+"note": "Account Transfer Collection FT26245WV52L\\BNK CK92020200540973 CK92020200540973 LCO31082600590",
+"cc": "cc-bank",
+"src": "ohm837-202609-017"
+},
+{
+"date": "2026-09-02",
+"k": "out",
+"amt": 150000.0,
+"desc": "تحويل صادر إلى RAYA FOR REAL ESTATE DEVELOPMENT",
+"who": "RAYA FOR REAL ESTATE DEVELOPMENT",
+"ref": "FT26245GMHYZ",
+"note": "Online FT26245GMHYZ\\BNK Funds 150,000.00 I.F.O 100065221203 RAYA FOR REAL ESTATE DEVELOPMENT Funds B/O 10006093",
+"src": "ohm837-202609-018"
+},
+{
+"date": "2026-09-02",
+"k": "out",
+"amt": 150000.0,
+"desc": "تحويل صادر إلى KAMAL OSMAN KAMAL AHMED",
+"who": "KAMAL OSMAN KAMAL AHMED",
+"ref": "FT26245WS0PR",
+"note": "Online FT26245WS0PR\\BNK Funds 150,000.00 I.F.O 100060237632 KAMAL OSMAN KAMAL AHMED Funds B/O 100060932837 OHM",
+"src": "ohm837-202609-019"
+},
+{
+"date": "2026-09-03",
+"k": "in",
+"amt": 70000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ا دمحا دومحم دمحم ملسا عملا تاقفن",
+"ref": "FT262465C0TY",
+"note": "IPN Inward FT262465C0TY\\BNK PayerMobNo:00201050005317 Payer Name: ا دمحا دومحم دمحم ملسا عملا تاقفن",
+"src": "ohm837-202609-020"
+},
+{
+"date": "2026-09-03",
+"k": "in",
+"amt": 17500.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "محا حاتفلادبع دمحم ةداغ عملا تاقفن",
+"ref": "FT26246N4MYN",
+"note": "IPN Inward FT26246N4MYN\\BNK PayerMobNo:00201066511616 Payer Name: محا حاتفلادبع دمحم ةداغ عملا تاقفن",
+"src": "ohm837-202609-021"
+},
+{
+"date": "2026-09-03",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن دمحم ديع ىدجام رانم ةشيعملا",
+"ref": "FT26246WW22Y",
+"note": "IPN Inward FT26246WW22Y\\BNK PayerMobNo:00201033889113 Payer Name: تاقفن دمحم ديع ىدجام رانم ةشيعملا",
+"src": "ohm837-202609-022"
+},
+{
+"date": "2026-09-03",
+"k": "in",
+"amt": 75000.0,
+"desc": "تحصيل شيك",
+"who": "CK68517000011555",
+"ref": "FT2624633CD3",
+"note": "Account Transfer Collection FT2624633CD3\\BNK CK68517000011555 CK68517000011555 LCO01092600030",
+"src": "ohm837-202609-023"
+},
+{
+"date": "2026-09-03",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK68517000011555",
+"ref": "FT262460Y5C7",
+"note": "Account Transfer Collection FT262460Y5C7\\BNK CK68517000011555 CK68517000011555 LCO01092600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-024"
+},
+{
+"date": "2026-09-06",
+"k": "out",
+"amt": 6000.0,
+"desc": "تحويل صادر إلى Osama Sayed Ibrahim Gad",
+"who": "Osama Sayed Ibrahim Gad",
+"ref": "FT26249Y9DZM",
+"note": "Online FT26249Y9DZM\\BNK Funds I.F.O 100040538083 Osama Sayed Ibrahim Gad Funds B/O 100060932837 OHM",
+"src": "ohm837-202609-025"
+},
+{
+"date": "2026-09-06",
+"k": "out",
+"amt": 400000.0,
+"desc": "تحويل صادر إلى NEW CITY HOUSING AND DEVELOPMENT",
+"who": "NEW CITY HOUSING AND DEVELOPMENT",
+"ref": "FT26249W6CMM",
+"note": "Online FT26249W6CMM\\BNK Funds 400,000.00 I.F.O 100014888157 NEW CITY HOUSING AND DEVELOPMENT Funds B/O 10006093",
+"src": "ohm837-202609-026"
+},
+{
+"date": "2026-09-06",
+"k": "out",
+"amt": 200000.0,
+"desc": "تحويل صادر إلى NEW CITY HOUSING AND DEVELOPMENT",
+"who": "NEW CITY HOUSING AND DEVELOPMENT",
+"ref": "FT26249ZTKKH",
+"note": "Online FT26249ZTKKH\\BNK Funds 200,000.00 I.F.O 100014888157 NEW CITY HOUSING AND DEVELOPMENT Funds B/O 10006093",
+"src": "ohm837-202609-027"
+},
+{
+"date": "2026-09-06",
+"k": "in",
+"amt": 40000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ا دمحا دومحم دمحم ملسا عملا تاقفن",
+"ref": "FT26249WJ0S4",
+"note": "IPN Inward FT26249WJ0S4\\BNK PayerMobNo:00201050005317 Payer Name: ا دمحا دومحم دمحم ملسا عملا تاقفن",
+"src": "ohm837-202609-028"
+},
+{
+"date": "2026-09-07",
+"k": "in",
+"amt": 112500.0,
+"desc": "تحصيل شيك",
+"who": "CK50290000148390",
+"ref": "FT262500LH8C",
+"note": "Account Transfer Collection FT262500LH8C\\BNK CK50290000148390 CK50290000148390 LCO03092600030",
+"src": "ohm837-202609-029"
+},
+{
+"date": "2026-09-07",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK50290000148390",
+"ref": "FT2625003S5C",
+"note": "Account Transfer Collection FT2625003S5C\\BNK CK50290000148390 CK50290000148390 LCO03092600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-030"
+},
+{
+"date": "2026-09-07",
+"k": "in",
+"amt": 65000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "AYA MOHAMED HOSSAM ELDI",
+"ref": "FT262507KSD3",
+"note": "IPN Inward FT262507KSD3\\BNK PayerMobNo:00201115419628 Payer Name: AYA MOHAMED HOSSAM ELDI Living Exp",
+"src": "ohm837-202609-031"
+},
+{
+"date": "2026-09-07",
+"k": "in",
+"amt": 66000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "MARWA HASSAN ةشيعملا تاقفن - Total",
+"ref": "FT2625021V88",
+"note": "IPN Inward FT2625021V88\\BNK PayerMobNo:00201120830788 Payer Name: MARWA HASSAN ةشيعملا تاقفن - Total",
+"src": "ohm837-202609-032"
+},
+{
+"date": "2026-09-07",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن ةفيلخديسلا دمحم ناميا شيعملا",
+"ref": "FT262509B5DY",
+"note": "IPN Inward FT262509B5DY\\BNK PayerMobNo:00201005244430 Payer Name: تاقفن ةفيلخديسلا دمحم ناميا شيعملا",
+"src": "ohm837-202609-033"
+},
+{
+"date": "2026-09-07",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن ةفيلخديسلا دمحم ناميا شيعملا",
+"ref": "FT26250GG04Z",
+"note": "IPN Inward FT26250GG04Z\\BNK PayerMobNo:00201005244430 Payer Name: تاقفن ةفيلخديسلا دمحم ناميا شيعملا",
+"src": "ohm837-202609-034"
+},
+{
+"date": "2026-09-07",
+"k": "in",
+"amt": 5000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "SEIF ALLAH EHAB MAHMOUD",
+"ref": "FT2625040QSB",
+"note": "IPN Inward FT2625040QSB\\BNK PayerMobNo:00201111131889 Payer Name: SEIF ALLAH EHAB MAHMOUD Living Exp",
+"src": "ohm837-202609-035"
+},
+{
+"date": "2026-09-07",
+"k": "exp",
+"amt": 250.0,
+"desc": "مصاريف تحويل",
+"who": "",
+"ref": "FT26250ZZFRG",
+"note": "IPN Fund Transfer Charges FT26250ZZFRG\\BNK AC-EGP1404200010085",
+"cc": "cc-bank",
+"src": "ohm837-202609-036"
+},
+{
+"date": "2026-09-07",
+"k": "out",
+"amt": 400000.0,
+"desc": "تحويل لحظي صادر إلى Eslam Hussein Ali Elsayed",
+"who": "Eslam Hussein Ali Elsayed",
+"ref": "FT26250ZZFRG",
+"note": "IPN Fund Transfer CIB Online 400,000.00 FT26250ZZFRG\\BNK PayeeName: Eslam Hussein Ali Elsayed BenefAcct:0215426",
+"src": "ohm837-202609-037"
+},
+{
+"date": "2026-09-08",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ىلع حوتفلاوبا ىلع دمحم",
+"ref": "FT26251VGHWF",
+"note": "IPN Inward FT26251VGHWF\\BNK PayerMobNo:00201005133912 Payer Name: ىلع حوتفلاوبا ىلع دمحم Living Expe",
+"src": "ohm837-202609-038"
+},
+{
+"date": "2026-09-08",
+"k": "in",
+"amt": 70000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "MOHAMED ALY ABOELFETTOU",
+"ref": "FT26251Q96VV",
+"note": "IPN Inward FT26251Q96VV\\BNK PayerMobNo:00201005133912 Payer Name: MOHAMED ALY ABOELFETTOU Living Exp",
+"src": "ohm837-202609-039"
+},
+{
+"date": "2026-09-08",
+"k": "in",
+"amt": 100.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ىلع حوتفلاوبا ىلع دمحم",
+"ref": "FT26251KSJDV",
+"note": "IPN Inward FT26251KSJDV\\BNK PayerMobNo:00201005133912 Payer Name: ىلع حوتفلاوبا ىلع دمحم Living Expe",
+"src": "ohm837-202609-040"
+},
+{
+"date": "2026-09-08",
+"k": "in",
+"amt": 47900.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ا دوصقملا دبع ديعس همحر عملا تاقفن",
+"ref": "FT262510TVWD",
+"note": "IPN Inward FT262510TVWD\\BNK PayerMobNo:00201128177025 Payer Name: ا دوصقملا دبع ديعس همحر عملا تاقفن",
+"src": "ohm837-202609-041"
+},
+{
+"date": "2026-09-08",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ا دوصقملا دبع ديعس همحر عملا تاقفن",
+"ref": "FT26251308HP",
+"note": "IPN Inward FT26251308HP\\BNK PayerMobNo:00201128177025 Payer Name: ا دوصقملا دبع ديعس همحر عملا تاقفن",
+"src": "ohm837-202609-042"
+},
+{
+"date": "2026-09-09",
+"k": "in",
+"amt": 25000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ا دوصقملا دبع ديعس همحر عملا تاقفن",
+"ref": "FT2625270DSZ",
+"note": "IPN Inward FT2625270DSZ\\BNK PayerMobNo:00201128177025 Payer Name: ا دوصقملا دبع ديعس همحر عملا تاقفن",
+"src": "ohm837-202609-043"
+},
+{
+"date": "2026-09-09",
+"k": "in",
+"amt": 58125.0,
+"desc": "تحويل وارد (Swift)",
+"who": "",
+"ref": "FT26252JYDDN",
+"note": "08SEP26 Inward FT26252JYDDN\\BNK 13010232112100 Funds I.F.O. 100060932837 OHM FOR URBAN DEVELOPMENT SWIFT FRO",
+"src": "ohm837-202609-044"
+},
+{
+"date": "2026-09-09",
+"k": "in",
+"amt": 137500.0,
+"desc": "تحويل بنكي وارد (ACH)",
+"who": "ACH-001OTDB262512015 RTIN(Installment 2 B59 Unit 1 3) FROM EG31000300015",
+"ref": "FT26252KJ3PZ",
+"note": "Inward ACH FT26252KJ3PZ\\BNK ACH-001OTDB262512015 RTIN(Installment 2 B59 Unit 1 3) FROM EG31000300015",
+"src": "ohm837-202609-045"
+},
+{
+"date": "2026-09-09",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحصيل شيك",
+"who": "CK67363176",
+"ref": "FT26252T0Q9B",
+"note": "Account Transfer Collection FT26252T0Q9B\\BNK CK67363176 CK67363176 LCO07092600370",
+"src": "ohm837-202609-046"
+},
+{
+"date": "2026-09-09",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK67363176",
+"ref": "FT26252RYW8L",
+"note": "Account Transfer Collection FT26252RYW8L\\BNK CK67363176 CK67363176 LCO07092600370",
+"cc": "cc-bank",
+"src": "ohm837-202609-047"
+},
+{
+"date": "2026-09-09",
+"k": "in",
+"amt": 55000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "MOHAMED ABDALLAH AHM تاقفن ةشيعملا",
+"ref": "FT26252RB4BL",
+"note": "IPN Inward FT26252RB4BL\\BNK PayerMobNo:00201001626319 Payer Name: MOHAMED ABDALLAH AHM تاقفن ةشيعملا",
+"src": "ohm837-202609-048"
+},
+{
+"date": "2026-09-09",
+"k": "in",
+"amt": 51000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "BELAL AHMED SAIED AHMED",
+"ref": "FT262520H0BM",
+"note": "IPN Inward FT262520H0BM\\BNK PayerMobNo:00201114887262 Payer Name: BELAL AHMED SAIED AHMED Living Exp",
+"src": "ohm837-202609-049"
+},
+{
+"date": "2026-09-09",
+"k": "out",
+"amt": 600000.0,
+"desc": "تحويل صادر إلى NEW CITY HOUSING AND DEVELOPMENT",
+"who": "NEW CITY HOUSING AND DEVELOPMENT",
+"ref": "FT26252LSM78",
+"note": "Online FT26252LSM78\\BNK Funds 600,000.00 I.F.O 100014888157 NEW CITY HOUSING AND DEVELOPMENT Funds B/O 10006093",
+"src": "ohm837-202609-050"
+},
+{
+"date": "2026-09-10",
+"k": "in",
+"amt": 67500.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "حم ليلجلادبع دمحم دومحم",
+"ref": "FT262535F45D",
+"note": "IPN Inward FT262535F45D\\BNK PayerMobNo:00201070856865 Payer Name: حم ليلجلادبع دمحم دومحم Living Exp",
+"src": "ohm837-202609-051"
+},
+{
+"date": "2026-09-10",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "سح ميحرلادبع حيصف ملسا عملا تاقفن",
+"ref": "FT2625340DDJ",
+"note": "IPN Inward FT2625340DDJ\\BNK PayerMobNo:00201113360078 Payer Name: سح ميحرلادبع حيصف ملسا عملا تاقفن",
+"src": "ohm837-202609-052"
+},
+{
+"date": "2026-09-10",
+"k": "in",
+"amt": 57375.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "AHMED RAGAB ATTA IBRAHI ملا فيراصم",
+"ref": "FT26253C2JQT",
+"note": "IPN Inward FT26253C2JQT\\BNK PayerMobNo:00201113432615 Payer Name: AHMED RAGAB ATTA IBRAHI ملا فيراصم",
+"src": "ohm837-202609-053"
+},
+{
+"date": "2026-09-10",
+"k": "in",
+"amt": 70000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن فسوي ديسلا دومحم ديسلا يعملا",
+"ref": "FT26253VQ685",
+"note": "IPN Inward FT26253VQ685\\BNK PayerMobNo:00201000717620 Payer Name: تاقفن فسوي ديسلا دومحم ديسلا يعملا",
+"src": "ohm837-202609-054"
+},
+{
+"date": "2026-09-10",
+"k": "in",
+"amt": 30000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن فسوي ديسلا دومحم ديسلا يعملا",
+"ref": "FT262531Q9KL",
+"note": "IPN Inward FT262531Q9KL\\BNK PayerMobNo:00201000717620 Payer Name: تاقفن فسوي ديسلا دومحم ديسلا يعملا",
+"src": "ohm837-202609-055"
+},
+{
+"date": "2026-09-10",
+"k": "out",
+"amt": 300000.0,
+"desc": "تحويل صادر إلى NEW CITY HOUSING AND DEVELOPMENT",
+"who": "NEW CITY HOUSING AND DEVELOPMENT",
+"ref": "FT26253M1ZLD",
+"note": "Online FT26253M1ZLD\\BNK Funds 300,000.00 I.F.O 100014888157 NEW CITY HOUSING AND DEVELOPMENT Funds B/O 10006093",
+"src": "ohm837-202609-056"
+},
+{
+"date": "2026-09-10",
+"k": "in",
+"amt": 105000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ALI AHMED MOHAMED MOSTA ةشيعملا تافورصم - Total",
+"ref": "FT26253T3VNT",
+"note": "IPN Inward FT26253T3VNT\\BNK PayerMobNo: Payer Name: ALI AHMED MOHAMED MOSTA ةشيعملا تافورصم - Total",
+"src": "ohm837-202609-057"
+},
+{
+"date": "2026-09-13",
+"k": "in",
+"amt": 35000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن يلع دومحم دمحا ناجشا ةشيعملا",
+"ref": "FT2625681MGC",
+"note": "IPN Inward FT2625681MGC\\BNK PayerMobNo:00201121100986 Payer Name: تاقفن يلع دومحم دمحا ناجشا ةشيعملا",
+"src": "ohm837-202609-058"
+},
+{
+"date": "2026-09-13",
+"k": "in",
+"amt": 90000.0,
+"desc": "تحصيل شيك",
+"who": "CK63853492",
+"ref": "FT26256B1KQC",
+"note": "Account Transfer Collection FT26256B1KQC\\BNK CK63853492 CK63853492 LCO09092600370",
+"src": "ohm837-202609-059"
+},
+{
+"date": "2026-09-13",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK63853492",
+"ref": "FT26256PDRPR",
+"note": "Account Transfer Collection FT26256PDRPR\\BNK CK63853492 CK63853492 LCO09092600370",
+"cc": "cc-bank",
+"src": "ohm837-202609-060"
+},
+{
+"date": "2026-09-13",
+"k": "in",
+"amt": 65000.0,
+"desc": "تحصيل شيك",
+"who": "CK927962506",
+"ref": "FT26256579KF",
+"note": "Account Transfer Collection FT26256579KF\\BNK CK927962506 CK927962506 LCO09092600570",
+"src": "ohm837-202609-061"
+},
+{
+"date": "2026-09-13",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK927962506",
+"ref": "FT26256P8PYS",
+"note": "Account Transfer Collection FT26256P8PYS\\BNK CK927962506 CK927962506 LCO09092600570",
+"cc": "cc-bank",
+"src": "ohm837-202609-062"
+},
+{
+"date": "2026-09-13",
+"k": "in",
+"amt": 57500.0,
+"desc": "تحصيل شيك",
+"who": "CK1717000036111",
+"ref": "FT2625600M1M",
+"note": "Account Transfer Collection FT2625600M1M\\BNK CK1717000036111 CK1717000036111 LCO09092600030",
+"src": "ohm837-202609-063"
+},
+{
+"date": "2026-09-13",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK1717000036111",
+"ref": "FT26256Z600Z",
+"note": "Account Transfer Collection FT26256Z600Z\\BNK CK1717000036111 CK1717000036111 LCO09092600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-064"
+},
+{
+"date": "2026-09-13",
+"k": "in",
+"amt": 500000.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "ABDALRAHMAN IBRAHIM GOMAA",
+"ref": "TT262564KGJF",
+"note": "14SEP26 Cash Deposit TT262564KGJF Branch Deposit C.I.B NEW OCTOBER BR - ABDALRAHMAN IBRAHIM GOMAA",
+"src": "ohm837-202609-065"
+},
+{
+"date": "2026-09-13",
+"k": "in",
+"amt": 470000.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "",
+"ref": "TT262567SJKX",
+"note": "14SEP26 Cash Deposit TT262567SJKX\\G07 Branch Deposit C.I.B MALL OF ARABIA - MOHAMED FATHY MOHAMED",
+"src": "ohm837-202609-066"
+},
+{
+"date": "2026-09-14",
+"k": "out",
+"amt": 1300000.0,
+"desc": "تحويل صادر إلى HOSSAM GAMAL FATHY MOHAMED",
+"who": "HOSSAM GAMAL FATHY MOHAMED",
+"ref": "FT26257KZ8FT",
+"note": "Online FT26257KZ8FT\\BNK Funds 1,300,000.00 I.F.O 100061554941 HOSSAM GAMAL FATHY MOHAMED Funds B/O 100060932837 O",
+"src": "ohm837-202609-067"
+},
+{
+"date": "2026-09-15",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن دمحم داؤف ميهاربا دجام يعملا",
+"ref": "FT26258GLZCF",
+"note": "IPN Inward FT26258GLZCF\\BNK PayerMobNo:00201110910980 Payer Name: تاقفن دمحم داؤف ميهاربا دجام يعملا",
+"src": "ohm837-202609-068"
+},
+{
+"date": "2026-09-15",
+"k": "in",
+"amt": 47500.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن دمحم داؤف ميهاربا دجام يعملا",
+"ref": "FT262580LQCK",
+"note": "IPN Inward FT262580LQCK\\BNK PayerMobNo:00201110910980 Payer Name: تاقفن دمحم داؤف ميهاربا دجام يعملا",
+"src": "ohm837-202609-069"
+},
+{
+"date": "2026-09-15",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحصيل شيك",
+"who": "CK551298419",
+"ref": "FT262589F9PW",
+"note": "Account Transfer Collection FT262589F9PW\\BNK CK551298419 CK551298419 OCO14092600105",
+"src": "ohm837-202609-070"
+},
+{
+"date": "2026-09-15",
+"k": "exp",
+"amt": 250.0,
+"desc": "مصاريف تحويل",
+"who": "",
+"ref": "FT262588J140",
+"note": "IPN Fund Transfer Charges FT262588J140\\BNK AC-EGP1404200010085",
+"cc": "cc-bank",
+"src": "ohm837-202609-071"
+},
+{
+"date": "2026-09-15",
+"k": "out",
+"amt": 190000.0,
+"desc": "تحويل لحظي صادر إلى Eslam Hussein Ali Elsayed",
+"who": "Eslam Hussein Ali Elsayed",
+"ref": "FT262588J140",
+"note": "IPN Fund Transfer CIB Online 190,000.00 FT262588J140\\BNK PayeeName: Eslam Hussein Ali Elsayed BenefAcct:0215426",
+"src": "ohm837-202609-072"
+},
+{
+"date": "2026-09-15",
+"k": "in",
+"amt": 20000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن دمحا ادبع دمحم دلاخ يعملا",
+"ref": "FT26258C3TH2",
+"note": "IPN Inward FT26258C3TH2\\BNK PayerMobNo:00201210540962 Payer Name: تاقفن دمحا ادبع دمحم دلاخ يعملا",
+"src": "ohm837-202609-073"
+},
+{
+"date": "2026-09-16",
+"k": "in",
+"amt": 62500.0,
+"desc": "تحصيل شيك",
+"who": "CK40617000063213",
+"ref": "FT26259JTP2J",
+"note": "Account Transfer Collection FT26259JTP2J\\BNK CK40617000063213 CK40617000063213 LCO14092600030",
+"src": "ohm837-202609-074"
+},
+{
+"date": "2026-09-16",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK40617000063213",
+"ref": "FT26259STJ50",
+"note": "Account Transfer Collection FT26259STJ50\\BNK CK40617000063213 CK40617000063213 LCO14092600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-075"
+},
+{
+"date": "2026-09-16",
+"k": "in",
+"amt": 15000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "تاقفن دمحم ديع ىدجام رانم ةشيعملا",
+"ref": "FT26259JNPCP",
+"note": "IPN Inward FT26259JNPCP\\BNK PayerMobNo:00201033889113 Payer Name: تاقفن دمحم ديع ىدجام رانم ةشيعملا",
+"src": "ohm837-202609-076"
+},
+{
+"date": "2026-09-16",
+"k": "exp",
+"amt": 150.0,
+"desc": "مصاريف تحويل",
+"who": "",
+"ref": "FT262590YD1B",
+"note": "IPN Fund Transfer Charges FT262590YD1B\\BNK AC-EGP1404200010085",
+"cc": "cc-bank",
+"src": "ohm837-202609-077"
+},
+{
+"date": "2026-09-16",
+"k": "out",
+"amt": 100000.0,
+"desc": "تحويل لحظي صادر إلى Eslam Hussein Ali Elsayed",
+"who": "Eslam Hussein Ali Elsayed",
+"ref": "FT262590YD1B",
+"note": "IPN Fund Transfer CIB Online 100,000.00 FT262590YD1B\\BNK PayeeName: Eslam Hussein Ali Elsayed BenefAcct:0215426",
+"src": "ohm837-202609-078"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 25000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "SAMAR ABDELAZIZ EBRAHIM",
+"ref": "FT262631CNS5",
+"note": "IPN Inward FT262631CNS5\\BNK PayerMobNo:00201560836336 Payer Name: SAMAR ABDELAZIZ EBRAHIM IRS Instan",
+"src": "ohm837-202609-079"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 65000.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "",
+"ref": "TT262638VFJF",
+"note": "Cash Deposit TT262638VFJF\\D27 Branch Deposit C.I.B El MERAAG BR. - H21-503 ABEER MOHAMED ABDELHAFIZ",
+"src": "ohm837-202609-080"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "NOURA ADE",
+"ref": "FT262635DSTW",
+"note": "IPN Inward FT262635DSTW\\BNK PayerMobNo:00201102944152 Payer Name: NOURA ADE Living Expenses - Total",
+"src": "ohm837-202609-081"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "NOURA ADE",
+"ref": "FT26263T9LCV",
+"note": "IPN Inward FT26263T9LCV\\BNK PayerMobNo:00201102944152 Payer Name: NOURA ADE Living Expenses - Total",
+"src": "ohm837-202609-082"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 75000.0,
+"desc": "تحصيل شيك",
+"who": "CK547724293",
+"ref": "FT262635DNL0",
+"note": "Account Transfer Collection FT262635DNL0\\BNK CK547724293 CK547724293 OCO17092600105",
+"src": "ohm837-202609-083"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 400000.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "",
+"ref": "TT262638FM1J",
+"note": "Cash Deposit TT262638FM1J\\G07 Branch Deposit C.I.B MALL OF ARABIA - ABDELRAHMAN IBARHIM GOMAA",
+"src": "ohm837-202609-084"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "انح ىاشب لماك ويباف",
+"ref": "FT262631T0HW",
+"note": "IPN Inward FT262631T0HW\\BNK PayerMobNo:00201225765504 Payer Name: انح ىاشب لماك ويباف Living Expense",
+"src": "ohm837-202609-085"
+},
+{
+"date": "2026-09-20",
+"k": "in",
+"amt": 12500.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "انح ىاشب لماك ويباف",
+"ref": "FT26263JBSJ7",
+"note": "IPN Inward FT26263JBSJ7\\BNK PayerMobNo:00201225765504 Payer Name: انح ىاشب لماك ويباف Living Expense",
+"src": "ohm837-202609-086"
+},
+{
+"date": "2026-09-21",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "هيطع دمحأ دمح رساي دمحم",
+"ref": "FT26264K59PL",
+"note": "IPN Inward FT26264K59PL\\BNK PayerMobNo:00201271671049 Payer Name: هيطع دمحأ دمح رساي دمحم Living Exp",
+"src": "ohm837-202609-087"
+},
+{
+"date": "2026-09-21",
+"k": "in",
+"amt": 25000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "هيطع دمحأ دمح رساي دمحم",
+"ref": "FT26264DLJY8",
+"note": "IPN Inward FT26264DLJY8\\BNK PayerMobNo:00201271671049 Payer Name: هيطع دمحأ دمح رساي دمحم Living Exp",
+"src": "ohm837-202609-088"
+},
+{
+"date": "2026-09-21",
+"k": "in",
+"amt": 79500.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "",
+"ref": "TT26264HXVG3",
+"note": "Cash Deposit TT26264HXVG3\\K18 Branch Deposit C.I.B FAYOUM - ABDELHAMID MOHAMED IBRAHIM MOHAMED ABDEL",
+"src": "ohm837-202609-089"
+},
+{
+"date": "2026-09-22",
+"k": "exp",
+"amt": 120.0,
+"desc": "مصاريف إدارية / شهرية للحساب",
+"who": "",
+"ref": "FT262659VFJ3",
+"note": "Fees Account Transfer FT262659VFJ3\\G11 Quarterly Administration Fees for 100060932837",
+"cc": "cc-bank",
+"src": "ohm837-202609-090"
+},
+{
+"date": "2026-09-22",
+"k": "in",
+"amt": 70000.0,
+"desc": "تحويل بنكي وارد (ACH)",
+"who": "ACH-REM0000001205735 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"ref": "FT262656R7BM",
+"note": "Inward ACH FT262656R7BM\\BNK ACH-REM0000001205735 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"src": "ohm837-202609-091"
+},
+{
+"date": "2026-09-22",
+"k": "in",
+"amt": 62500.0,
+"desc": "تحويل بنكي وارد (ACH)",
+"who": "ACH-REM0000001205861 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"ref": "FT262657MFK2",
+"note": "Inward ACH FT262657MFK2\\BNK ACH-REM0000001205861 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"src": "ohm837-202609-092"
+},
+{
+"date": "2026-09-22",
+"k": "in",
+"amt": 90000.0,
+"desc": "تحويل بنكي وارد (ACH)",
+"who": "ACH-REM0000001205741 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"ref": "FT26265S0R6H",
+"note": "Inward ACH FT26265S0R6H\\BNK ACH-REM0000001205741 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"src": "ohm837-202609-093"
+},
+{
+"date": "2026-09-22",
+"k": "in",
+"amt": 125000.0,
+"desc": "تحويل بنكي وارد (ACH)",
+"who": "ACH-REM0000001205746 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"ref": "FT26265W2Z6D",
+"note": "Inward ACH FT26265W2Z6D\\BNK ACH-REM0000001205746 RTIN(رهش طسق ربمتبس H17 هقشلا مقر FROM EG5300020515",
+"src": "ohm837-202609-094"
+},
+{
+"date": "2026-09-22",
+"k": "in",
+"amt": 18000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "MARWA MOKHTAR ةشيعملا تاقفن - Tota",
+"ref": "FT26265M300D",
+"note": "IPN Inward FT26265M300D\\BNK PayerMobNo:00201117627437 Payer Name: MARWA MOKHTAR ةشيعملا تاقفن - Tota",
+"src": "ohm837-202609-095"
+},
+{
+"date": "2026-09-22",
+"k": "in",
+"amt": 68000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "MARWA MOKHTAR ةشيعملا تاقفن - Tota",
+"ref": "FT262655CYT4",
+"note": "IPN Inward FT262655CYT4\\BNK PayerMobNo:00201117627437 Payer Name: MARWA MOKHTAR ةشيعملا تاقفن - Tota",
+"src": "ohm837-202609-096"
+},
+{
+"date": "2026-09-22",
+"k": "in",
+"amt": 120000.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "",
+"ref": "TT26265D9VNY",
+"note": "Cash Deposit TT26265D9VNY\\B10 Branch Deposit C.I.B EL-HEGAZ BRANCH - AHM,ED HUSSEIN FARAG",
+"src": "ohm837-202609-097"
+},
+{
+"date": "2026-09-24",
+"k": "in",
+"amt": 40000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "فيراصم ليلخ اطع لامج هنيثب ةشيعملا",
+"ref": "FT262672BR6V",
+"note": "IPN Inward FT262672BR6V\\BNK PayerMobNo:00201013221069 Payer Name: فيراصم ليلخ اطع لامج هنيثب ةشيعملا",
+"src": "ohm837-202609-098"
+},
+{
+"date": "2026-09-24",
+"k": "in",
+"amt": 30000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ب دمحم ينيسح دمحا يفطصم ملا فيراصم",
+"ref": "FT26267W0KN3",
+"note": "IPN Inward FT26267W0KN3\\BNK PayerMobNo:00201093811430 Payer Name: ب دمحم ينيسح دمحا يفطصم ملا فيراصم",
+"src": "ohm837-202609-099"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "SAMEH HELAL MOHAMED HAM عملا تاقفن",
+"ref": "FT26270HYLLZ",
+"note": "IPN Inward FT26270HYLLZ\\BNK PayerMobNo:00201011494382 Payer Name: SAMEH HELAL MOHAMED HAM عملا تاقفن",
+"src": "ohm837-202609-100"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 60000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "SARA EHAB MOHAMED Housing Finance",
+"ref": "FT26270T82VK",
+"note": "IPN Inward FT26270T82VK\\BNK PayerMobNo:00201115240533 Payer Name: SARA EHAB MOHAMED Housing Finance",
+"src": "ohm837-202609-101"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 70000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "دمحا نيدلارخف قراط ىلع",
+"ref": "FT2627037TLP",
+"note": "IPN Inward FT2627037TLP\\BNK PayerMobNo:00201127333184 Payer Name: دمحا نيدلارخف قراط ىلع Living Expe",
+"src": "ohm837-202609-102"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 30000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ALY TAREK FAKHR ELDIN A",
+"ref": "FT26270NZMC7",
+"note": "IPN Inward FT26270NZMC7\\BNK PayerMobNo:00201127333184 Payer Name: ALY TAREK FAKHR ELDIN A Living Exp",
+"src": "ohm837-202609-103"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 40000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "GHADA MOHAMED ةشيعملا تاقفن - Tota",
+"ref": "FT26270K4D2G",
+"note": "IPN Inward FT26270K4D2G\\BNK PayerMobNo:00201066511616 Payer Name: GHADA MOHAMED ةشيعملا تاقفن - Tota",
+"src": "ohm837-202609-104"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 5000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "محا حاتفلادبع دمحم هداغ عملا تاقفن",
+"ref": "FT26270KW70Y",
+"note": "IPN Inward FT26270KW70Y\\BNK PayerMobNo:00201066511616 Payer Name: محا حاتفلادبع دمحم هداغ عملا تاقفن",
+"src": "ohm837-202609-105"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 62000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "MOHAMMED HUSSEIN MOHAMM IR Al Muza",
+"ref": "FT26270LZC3T",
+"note": "IPN Inward FT26270LZC3T\\BNK PayerMobNo:00201000000000 Payer Name: MOHAMMED HUSSEIN MOHAMM IR Al Muza",
+"src": "ohm837-202609-106"
+},
+{
+"date": "2026-09-27",
+"k": "in",
+"amt": 30000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "فيراصم ليلخ اطع لامج هنيثب ةشيعملا",
+"ref": "FT26270RNZBQ",
+"note": "IPN Inward FT26270RNZBQ\\BNK PayerMobNo:00201013221069 Payer Name: فيراصم ليلخ اطع لامج هنيثب ةشيعملا",
+"src": "ohm837-202609-107"
+},
+{
+"date": "2026-09-28",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK18860000311173",
+"ref": "FT26271ZB0W1",
+"note": "Account Transfer Collection FT26271ZB0W1\\BNK CK18860000311173 CK18860000311173 LCO24092600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-108"
+},
+{
+"date": "2026-09-28",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK49217000037657",
+"ref": "FT2627122Y41",
+"note": "Account Transfer Collection FT2627122Y41\\BNK CK49217000037657 CK49217000037657 LCO24092600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-109"
+},
+{
+"date": "2026-09-28",
+"k": "in",
+"amt": 126000.0,
+"desc": "تحصيل شيك",
+"who": "CK40717000066048",
+"ref": "FT26271BF1SN",
+"note": "Account Transfer Collection FT26271BF1SN\\BNK CK40717000066048 CK40717000066048 LCO24092600030",
+"src": "ohm837-202609-110"
+},
+{
+"date": "2026-09-28",
+"k": "exp",
+"amt": 25.0,
+"desc": "عمولة تحصيل شيك",
+"who": "CK40717000066048",
+"ref": "FT262714GP0F",
+"note": "Account Transfer Collection FT262714GP0F\\BNK CK40717000066048 CK40717000066048 LCO24092600030",
+"cc": "cc-bank",
+"src": "ohm837-202609-111"
+},
+{
+"date": "2026-09-28",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ر ادبع لماك دمحا هبه عملا تاقفن",
+"ref": "FT26271Z6M0Q",
+"note": "IPN Inward FT26271Z6M0Q\\BNK PayerMobNo:00201031197604 Payer Name: ر ادبع لماك دمحا هبه عملا تاقفن",
+"src": "ohm837-202609-112"
+},
+{
+"date": "2026-09-28",
+"k": "exp",
+"amt": 150.0,
+"desc": "مصاريف إدارية / شهرية للحساب",
+"who": "",
+"ref": "FT26271Y97CQ",
+"note": "Fees Account Transfer FT26271Y97CQ\\BNK GTS MONTHLY FEES for 100060932837",
+"cc": "cc-bank",
+"src": "ohm837-202609-113"
+},
+{
+"date": "2026-09-28",
+"k": "exp",
+"amt": 350.0,
+"desc": "مصاريف تحويل",
+"who": "",
+"ref": "FT262710J402",
+"note": "29SEP26 Outward Swift Charges FT262710J402\\BNK AC-100060932837",
+"cc": "cc-bank",
+"src": "ohm837-202609-114"
+},
+{
+"date": "2026-09-28",
+"k": "out",
+"amt": 1500000.0,
+"desc": "تحويل خارجي (Swift)",
+"who": "",
+"ref": "FT262710J402",
+"note": "29SEP26 Outward FT262710J402\\BNK 1,500,000.00 FT26090029836558",
+"src": "ohm837-202609-115"
+},
+{
+"date": "2026-09-28",
+"k": "in",
+"amt": 50000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "ليوحت قداص قحسا فيرظ ىناه ملا يظحل",
+"ref": "FT2627110C0P",
+"note": "IPN Inward FT2627110C0P\\BNK PayerMobNo:00201003969322 Payer Name: ليوحت قداص قحسا فيرظ ىناه ملا يظحل",
+"src": "ohm837-202609-116"
+},
+{
+"date": "2026-09-29",
+"k": "in",
+"amt": 70000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "فيراصم دمحم دمحا دومحم دمحا شيعملا",
+"ref": "FT2627203KNC",
+"note": "IPN Inward FT2627203KNC\\BNK PayerMobNo:00201010100134 Payer Name: فيراصم دمحم دمحا دومحم دمحا شيعملا",
+"src": "ohm837-202609-117"
+},
+{
+"date": "2026-09-29",
+"k": "in",
+"amt": 20000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "حم ديمحلا دبع نيما ءلع",
+"ref": "FT26272CYKLG",
+"note": "IPN Inward FT26272CYKLG\\BNK PayerMobNo:00201067651296 Payer Name: حم ديمحلا دبع نيما ءلع Living Exp",
+"src": "ohm837-202609-118"
+},
+{
+"date": "2026-09-30",
+"k": "exp",
+"amt": 360.0,
+"desc": "مصاريف إدارية / شهرية للحساب",
+"who": "",
+"ref": "FT26273P8414",
+"note": "Fees Account Transfer FT26273P8414\\BNK Monthly Statement Quarterly Fees for 100060932837",
+"cc": "cc-bank",
+"src": "ohm837-202609-119"
+},
+{
+"date": "2026-09-30",
+"k": "in",
+"amt": 86000.0,
+"desc": "إيداع نقدي في الفرع",
+"who": "",
+"ref": "TT2627303506",
+"note": "Cash Deposit TT2627303506\\K18 Branch Deposit C.I.B FAYOUM - MONA KAMAL AHMED AMR GAMAL AHMED ABBAS",
+"src": "ohm837-202609-120"
+},
+{
+"date": "2026-09-30",
+"k": "in",
+"amt": 115500.0,
+"desc": "تحويل أونلاين وارد",
+"who": "Transfer to Another CIB Client",
+"ref": "FT26273MJKF6",
+"note": "Online Transfer FT26273MJKF6\\BNK - Transfer to Another CIB Client",
+"src": "ohm837-202609-121"
+},
+{
+"date": "2026-09-30",
+"k": "in",
+"amt": 25000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "MOHAMED ESSAM MOHAMED M",
+"ref": "FT262736SWG6",
+"note": "IPN Inward FT262736SWG6\\BNK PayerMobNo:00201227452363 Payer Name: MOHAMED ESSAM MOHAMED M Living Exp",
+"src": "ohm837-202609-122"
+},
+{
+"date": "2026-09-30",
+"k": "in",
+"amt": 48000.0,
+"desc": "تحويل لحظي وارد (إنستاباي)",
+"who": "دبع رادب دمحم ريمس فيرش",
+"ref": "FT26273H7BP7",
+"note": "IPN Inward FT26273H7BP7\\BNK PayerMobNo:00201220405835 Payer Name: دبع رادب دمحم ريمس فيرش Living Exp CR 37 5,298,170.00 87",
+"src": "ohm837-202609-123"
+}
+]
+}

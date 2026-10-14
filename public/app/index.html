@@ -450,28 +450,30 @@ function vExp(){
   return h;
 }
 function ccOpts(sel){return (D.tr.ccs||[]).filter(function(x){return !x.off}).map(function(x){return '<option value="'+x.id+'"'+(x.id===sel?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')}
-function trForm(k){
+function trForm(k,eid){
   PHOTO='';var s=D.tr.conf.start;
-  sheet(k==='in'?'وارد للخزنة':k==='exp'?'مصروف من الخزنة':'إيداع بنك / تحويل من الخزنة','<div class="card">'
+  sheet((eid?'تعديل · ':'')+(k==='in'?'وارد للخزنة':k==='exp'?'مصروف من الخزنة':'إيداع بنك / تحويل من الخزنة'),'<div class="card">'
    +'<div class="grid2" style="grid-template-columns:1fr 1fr"><div><label class="f">المبلغ</label><input class="inp" id="t_amt" type="number" inputmode="decimal"></div><div><label class="f">التاريخ</label><input class="inp" id="t_date" type="date" min="'+s+'" max="'+TODAY+'" value="'+TODAY+'"></div></div>'
    +(k==='exp'?'<label class="f">مركز التكلفة</label><div style="display:flex;gap:6px"><select class="inp" id="t_cc" style="flex:1"><option value="">اختر مركز التكلفة</option>'+ccOpts(TRCC)+'</select><button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="var x=document.getElementById(\'t_ccnew\');x.style.display=\'flex\';document.getElementById(\'cc_n\').focus()">+ جديد</button></div><div id="t_ccnew" style="display:none;gap:6px;margin-top:6px"><input class="inp" id="cc_n" style="flex:1" placeholder="اسم مركز التكلفة الجديد"><button class="btn k sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="ccSave(\'\',1)">إضافة</button></div>':'')
    +'<label class="f">البيان</label><input class="inp" id="t_desc" placeholder="'+(k==='in'?'مثال: عهدة من الإدارة':k==='exp'?'مثال: فاتورة كهرباء الموقع':'مثال: إيداع بنك مصر')+'">'
    +(k==='dep'?'<label class="f">حساب البنك</label><select class="inp" id="t_bank"><option value="">اختر الحساب</option>'+bankOpts('')+'</select>'+((D.tr.banks||[]).length?'':'<p class="note" style="color:var(--red2)">لازم الأدمن يضيف حساب البنك الأول من «البنوك».</p>'):'<label class="f">'+(k==='in'?'من (اختياري)':'المستفيد / المورد (اختياري)')+'</label><input class="inp" id="t_who">')
    +'<label class="f">رقم المستند (اختياري)</label><input class="inp" id="t_ref">'
    +'<label class="f">'+(k==='dep'?'صورة إيصال الإيداع (إجبارية)':'صورة الفاتورة / الإيصال (اختياري)')+'</label><label class="photo" id="phbox"><span>📷 صوّر '+(k==='dep'?'إيصال البنك':'المستند')+'</span><input type="file" accept="image/*" onchange="pickPhoto(this)"></label>'
-   +'</div><div class="btns"><button class="btn" onclick="trSave(\''+k+'\')">حفظ القيد</button></div>');
+   +'</div><div class="btns"><button class="btn" onclick="trSave(\''+k+'\','+(eid||0)+')">حفظ القيد</button></div>');
+  if(eid){var e=(D.tr.items||[]).filter(function(x){return x.id===eid})[0];if(e)fillV({t_amt:e.amt,t_date:e.date,t_desc:e.desc,t_who:e.who,t_ref:e.ref,t_cc:e.cc,t_bank:e.bank});if(e&&e.docs){var p=document.getElementById('phbox');if(p)p.querySelector('span').textContent='📎 فيه مستند مرفق — اضغط لإضافة صورة تانية'}}
 }
-function trSave(k){
-  var amt=parseFloat(V('t_amt')),date=V('t_date')||TODAY,b={t:'tr.add',k:k,amt:amt,date:date,desc:V('t_desc'),who:V('t_who'),ref:V('t_ref'),cc:V('t_cc'),bank:V('t_bank'),photo:PHOTO||undefined};
-  if(!(amt>0)){toast('اكتب المبلغ');return}if(k==='dep'&&!b.bank){toast('اختار حساب البنك');return}if(k==='dep'&&!PHOTO){toast('لازم ترفق صورة إيصال الإيداع');return}if(k==='exp'&&!b.cc){toast('اختار مركز التكلفة');return}if(!b.desc){toast('اكتب البيان');return}
-  var go=function(){op(b,'تم حفظ القيد').then(function(){PHOTO='';back();TRD=date;render()},function(){})};
-  var bal=trBal(trMoves());if(k!=='in'&&amt>bal+0.001)confirmBox('المبلغ أكبر من رصيد الخزنة ('+Math.round(bal).toLocaleString('en-US')+'). تسجّله برضه؟','تسجيل',go);else go();
+function trSave(k,eid){
+  var amt=parseFloat(V('t_amt')),date=V('t_date')||TODAY,b={t:eid?'tr.edit':'tr.add',id:eid||undefined,k:k,amt:amt,date:date,desc:V('t_desc'),who:V('t_who'),ref:V('t_ref'),cc:V('t_cc'),bank:V('t_bank'),photo:PHOTO||undefined};
+  if(!(amt>0)){toast('اكتب المبلغ');return}if(k==='dep'&&!b.bank){toast('اختار حساب البنك');return}if(k==='dep'&&!PHOTO&&!(eid&&((D.tr.items||[]).filter(function(x){return x.id===eid})[0]||{}).docs)){toast('لازم ترفق صورة إيصال الإيداع');return}if(k==='exp'&&!b.cc){toast('اختار مركز التكلفة');return}if(!b.desc){toast('اكتب البيان');return}
+  var go=function(){op(b,eid?'تم تعديل القيد':'تم حفظ القيد').then(function(){PHOTO='';back();TRD=date;render()},function(){})};
+  var bal=trBal(trMoves());if(!eid&&k!=='in'&&amt>bal+0.001)confirmBox('المبلغ أكبر من رصيد الخزنة ('+Math.round(bal).toLocaleString('en-US')+'). تسجّله برضه؟','تسجيل',go);else go();
 }
 function trOpen(id){sheet('قيد خزنة',function(){var e=(D.tr.items||[]).filter(function(x){return x.id===id})[0];if(!e)return '<div class="empty">القيد غير موجود</div>';var cc=trCC();
   var h='<div class="card cen"><div class="note" style="margin:0">'+TRK[e.k]+'</div><div class="big" style="color:'+(e.k==='in'?'#1f9d55':'var(--red2)')+'">'+money(e.amt)+' <small style="font-size:14px;font-weight:600">ج.م</small></div></div><div class="card">'
    +kv('البيان',esc(e.desc))+kv('التاريخ',fd(e.date))+(e.k==='exp'?kv('مركز التكلفة',esc((cc[e.cc]||{}).name||'—')):'')+(e.bank?kv('حساب البنك',esc((bkM()[e.bank]||{}).name||'')):'')+kv(e.k==='in'?'من':e.k==='exp'?'المستفيد':'البنك / الحساب',esc(e.who))+kv('رقم المستند',esc(e.ref))+kv('سجّله',esc(e.by)+' · '+fdt(e.at))+'</div>';
   if(e.docs)h+='<div class="sec">المستند</div><div class="card"><div class="thumbs">'+e.docs.map(function(x){return '<img data-k="'+esc(x.k)+'" onclick="showImg(\''+esc(x.k)+'\')" alt="">'}).join('')+'</div></div>';
-  if(can('edit'))h+='<div class="btns"><button class="btn dng sm" onclick="trDel('+e.id+')">حذف القيد</button></div>';
+  h+=(e.eby?'<p class="note">آخر تعديل: '+esc(e.eby)+' · '+fdt(e.eat)+'</p>':'');
+  if(can('edit'))h+='<div class="btns"><button class="btn g sm" onclick="back();trForm(\''+e.k+'\','+e.id+')">تعديل القيد</button><button class="btn dng sm" onclick="trDel('+e.id+')">حذف القيد</button></div>';
   return h})}
 function trDel(id){confirmBox('حذف القيد ده؟','حذف',function(){op({t:'tr.del',id:id},'تم حذف القيد').then(function(){back();render()},function(){})})}
 function trConf(){var c=D.tr.conf;sheet('ضبط الخزنة','<div class="card"><div class="note" style="margin-top:0">اكتب المبلغ الموجود فعلاً في الخزنة في تاريخ البداية. أي تحصيل كاش أو قيد من التاريخ ده وبعده بيتحسب على الرصيد.</div>'
@@ -498,7 +500,10 @@ function trExport(){var cc=trCC(),mv=trMoves().sort(function(a,b){return a.date<
 
 
 /* ---------- bank accounts (البنوك) ---------- */
-var TRB='',BTK={in:'إيداع / وارد',exp:'مصروف',wd:'سحب للخزنة',xfer:'تحويل لحساب تاني'};
+var TRB='',BTK={in:'إيداع / وارد',exp:'مصروف',out:'صرف / تحويل خارج',wd:'سحب للخزنة',xfer:'تحويل لحساب تاني'};
+function fillV(o){Object.keys(o).forEach(function(k){var e=document.getElementById(k);if(e&&o[k]!=null&&o[k]!=='')e.value=o[k]})}
+function btReform(id,eid,k){var v={t_amt:V('t_amt'),t_date:V('t_date'),t_desc:V('t_desc'),t_who:V('t_who'),t_ref:V('t_ref'),t_cc:V('t_cc'),t_to:V('t_to')};STACK.pop();btForm(id,k,eid);fillV(v)}
+
 function bkM(){var o={};(D.tr.banks||[]).forEach(function(b){o[b.id]=b});return o}
 function bMoves(id){var T=D.tr,b=bkM()[id],bm=bkM(),cc=trCC();if(!b)return [];
   var mv=T.bcol.filter(function(c){return c.bank===id}).map(function(c){return {auto:1,p:c.p,date:c.date,k:'in',amt:+c.amt,at:c.at,desc:'تحصيل · '+c.client,sub:(c.unit||'')+(c.acc?' · '+c.acc:'')+(c.by?' · '+c.by:'')}})
@@ -521,8 +526,8 @@ function vBank(id){
   var b=bkM()[id],mv=bMoves(id),bal=+b.open||0,h='';
   var rows=mv.map(function(x){bal+=sg(x);return {x:x,bal:bal}}).reverse();
   h+='<div class="btns" style="margin-top:0"><button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="setTR(\'TRB\',\'\')">→ كل الحسابات</button>'+(admin()?'<button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 14px" onclick="bankForm(\''+id+'\')">تعديل الحساب</button>':'')+'</div>';
-  h+='<div class="card cen"><div class="note" style="margin:0">'+esc(b.name)+(b.no?' · <span class="num">'+esc(b.no)+'</span>':'')+'</div><div class="big" style="'+(bal<0?'color:var(--red2)':'')+'">'+money(bal)+' <small style="font-size:14px;font-weight:600">ج.م</small></div><div class="note" style="margin:0">رصيد أول المدة '+Math.round(+b.open||0).toLocaleString('en-US')+' بتاريخ '+fd(b.start)+'</div></div>';
-  if(!b.off)h+='<div class="btns"><button class="btn k sm" onclick="btForm(\''+id+'\',\'in\')">+ إيداع</button><button class="btn sm" onclick="btForm(\''+id+'\',\'exp\')">− صرف</button></div><div class="btns"><button class="btn g sm" onclick="btForm(\''+id+'\',\'wd\')">سحب للخزنة</button><button class="btn g sm" onclick="btForm(\''+id+'\',\'xfer\')">تحويل لحساب تاني</button></div>';
+  h+='<div class="card cen"><div class="note" style="margin:0">'+esc(b.name)+(b.no?' · <span class="num">'+esc(b.no)+'</span>':'')+'</div><div class="big" style="'+(bal<0?'color:var(--red2)':'')+'">'+money(bal)+' <small style="font-size:14px;font-weight:600">ج.م</small></div><div class="note" style="margin:0">رصيد أول المدة '+Math.round(+b.open||0).toLocaleString('en-US')+' بتاريخ '+fd(b.start)+'</div>'+(b.stmt?'<div class="note" style="margin:0">مطابق لكشف البنك حتى '+fd(b.stmt)+' — تحصيلات التطبيق بتتحسب بعد التاريخ ده</div>':'')+'</div>';
+  if(!b.off)h+='<div class="btns"><button class="btn k sm" onclick="btForm(\''+id+'\',\'in\')">+ إيداع</button><button class="btn sm" onclick="btForm(\''+id+'\',\'exp\')">− صرف</button></div><div class="btns"><button class="btn g sm" onclick="btForm(\''+id+'\',\'out\')">تحويل خارج</button><button class="btn g sm" onclick="btForm(\''+id+'\',\'wd\')">سحب للخزنة</button><button class="btn g sm" onclick="btForm(\''+id+'\',\'xfer\')">بين الحسابات</button></div>';
   h+='<div class="gh"><span>كشف الحساب</span><span>'+mv.length+' حركة</span></div>';
   if(!rows.length)return h+'<div class="empty">لا توجد حركات بعد</div>';
   h+='<div class="list">'+rows.slice(0,300).map(function(r){var x=r.x,on=x.auto?'openP('+x.p+')':x.tr?'trOpen('+x.tr.id+')':'btOpen('+x.bt.id+')';
@@ -545,26 +550,29 @@ function bankForm(id){var b=id?bkM()[id]:{start:TODAY,open:0,keys:[]};
 function bkAddKey(el,k){var t=document.getElementById('bk_k'),l=t.value.split(/[,،\n]/).map(function(x){return x.trim()}).filter(Boolean);if(l.indexOf(k)<0)l.push(k);t.value=l.join(', ');el.classList.add('on')}
 function bankSave(id){var n=V('bk_n'),o=parseFloat(V('bk_o')||'0'),off=document.getElementById('bk_off');if(!n){toast('اكتب اسم الحساب');return}if(!isFinite(o)){toast('الرصيد غير صحيح');return}
   op({t:'bank.save',id:id||undefined,name:n,no:V('bk_no'),open:o,start:V('bk_s')||TODAY,keys:V('bk_k'),off:off?off.checked:false},'تم حفظ الحساب').then(function(){back();render()},function(){})}
-function btForm(id,k){PHOTO='';var b=bkM()[id],mn=b.start>D.tr.conf.start||k!=='wd'?b.start:D.tr.conf.start;
-  sheet(esc(b.name)+' · '+BTK[k],'<div class="card">'
+function btForm(id,k,eid){PHOTO='';var E=eid?(D.tr.bt||[]).filter(function(x){return x.id===eid})[0]:null;var b=bkM()[id],mn=b.start>D.tr.conf.start||k!=='wd'?b.start:D.tr.conf.start;
+  sheet((E?'تعديل · ':'')+esc(b.name)+' · '+BTK[k],'<div class="card">'+(E?'<label class="f">نوع الحركة</label><select class="inp" id="t_k" onchange="btReform(\''+id+'\','+eid+',this.value)">'+Object.keys(BTK).filter(function(x){return x!=='xfer'||k==='xfer'}).map(function(x){return '<option value="'+x+'"'+(x===k?' selected':'')+'>'+BTK[x]+'</option>'}).join('')+'</select>':'')
    +'<div class="grid2" style="grid-template-columns:1fr 1fr"><div><label class="f">المبلغ</label><input class="inp" id="t_amt" type="number" inputmode="decimal"></div><div><label class="f">التاريخ</label><input class="inp" id="t_date" type="date" min="'+mn+'" max="'+TODAY+'" value="'+TODAY+'"></div></div>'
    +(k==='exp'?'<label class="f">مركز التكلفة</label><select class="inp" id="t_cc"><option value="">اختر مركز التكلفة</option>'+ccOpts('')+'</select>':'')
    +(k==='xfer'?'<label class="f">إلى حساب</label><select class="inp" id="t_to"><option value="">اختر الحساب</option>'+bankOpts('',id)+'</select>':'')
    +'<label class="f">الوصف</label><input class="inp" id="t_desc" placeholder="'+(k==='in'?'مثال: تحويل من العميل / إيداع شيك':k==='exp'?'مثال: سداد فاتورة مورد':k==='wd'?'مثال: سحب نقدي لمصاريف الموقع':'مثال: تغطية حساب')+'">'
-   +(k==='in'||k==='exp'?'<label class="f">'+(k==='in'?'من (اختياري)':'المستفيد (اختياري)')+'</label><input class="inp" id="t_who">':'')
+   +(k==='in'||k==='exp'||k==='out'?'<label class="f">'+(k==='in'?'من (اختياري)':'المستفيد (اختياري)')+'</label><input class="inp" id="t_who">':'')
    +'<label class="f">رقم المستند / الشيك (اختياري)</label><input class="inp" id="t_ref">'
    +'<label class="f">صورة المستند (اختياري)</label><label class="photo" id="phbox"><span>📷 صوّر المستند</span><input type="file" accept="image/*" onchange="pickPhoto(this)"></label>'
    +(k==='wd'?'<p class="note">المبلغ هيتخصم من البنك ويدخل رصيد الخزنة.</p>':'')
-   +'</div><div class="btns"><button class="btn" onclick="btSave(\''+id+'\',\''+k+'\')">حفظ</button></div>')}
-function btSave(id,k){var amt=parseFloat(V('t_amt')),b={t:'bt.add',bank:id,k:k,amt:amt,date:V('t_date')||TODAY,desc:V('t_desc'),cc:V('t_cc'),to:V('t_to'),who:V('t_who'),ref:V('t_ref'),photo:PHOTO||undefined};
+   +'</div><div class="btns"><button class="btn" onclick="btSave(\''+id+'\',\''+k+'\','+(eid||0)+')">حفظ</button></div>');
+  if(E){fillV({t_amt:E.amt,t_date:E.date,t_desc:E.desc,t_who:E.who,t_ref:E.ref,t_cc:E.cc,t_to:E.to});if(E.docs){var p=document.getElementById('phbox');if(p)p.querySelector('span').textContent='📎 فيه مستند مرفق — اضغط لإضافة صورة تانية'}}
+}
+function btSave(id,k,eid){var amt=parseFloat(V('t_amt')),b={t:eid?'bt.edit':'bt.add',id:eid||undefined,bank:id,k:k,amt:amt,date:V('t_date')||TODAY,desc:V('t_desc'),cc:V('t_cc'),to:V('t_to'),who:V('t_who'),ref:V('t_ref'),photo:PHOTO||undefined};
   if(!(amt>0)){toast('اكتب المبلغ');return}if(k==='exp'&&!b.cc){toast('اختار مركز التكلفة');return}if(k==='xfer'&&!b.to){toast('اختار الحساب المحوّل إليه');return}if(!b.desc){toast('اكتب الوصف');return}
-  var go=function(){op(b,'تم حفظ الحركة').then(function(){PHOTO='';back();render()},function(){})};
-  var bal=bBal(id);if(k!=='in'&&amt>bal+0.001)confirmBox('المبلغ أكبر من رصيد الحساب ('+Math.round(bal).toLocaleString('en-US')+'). تسجّله برضه؟','تسجيل',go);else go()}
+  var go=function(){op(b,eid?'تم تعديل الحركة':'تم حفظ الحركة').then(function(){PHOTO='';back();render()},function(){})};
+  var bal=bBal(id);if(!eid&&k!=='in'&&amt>bal+0.001)confirmBox('المبلغ أكبر من رصيد الحساب ('+Math.round(bal).toLocaleString('en-US')+'). تسجّله برضه؟','تسجيل',go);else go()}
 function btOpen(id){sheet('حركة بنك',function(){var e=(D.tr.bt||[]).filter(function(x){return x.id===id})[0];if(!e)return '<div class="empty">الحركة غير موجودة</div>';var bm=bkM(),cc=trCC();
   var h='<div class="card cen"><div class="note" style="margin:0">'+esc((bm[e.bank]||{}).name||'')+' · '+BTK[e.k]+'</div><div class="big" style="color:'+(e.k==='in'?'#1f9d55':'var(--red2)')+'">'+money(e.amt)+' <small style="font-size:14px;font-weight:600">ج.م</small></div></div><div class="card">'
    +kv('الوصف',esc(e.desc))+kv('التاريخ',fd(e.date))+(e.k==='exp'?kv('مركز التكلفة',esc((cc[e.cc]||{}).name||'—')):'')+(e.k==='xfer'?kv('إلى حساب',esc((bm[e.to]||{}).name||'')):'')+kv(e.k==='in'?'من':'المستفيد',esc(e.who))+kv('رقم المستند',esc(e.ref))+kv('سجّلها',esc(e.by)+' · '+fdt(e.at))+'</div>';
   if(e.docs)h+='<div class="sec">المستند</div><div class="card"><div class="thumbs">'+e.docs.map(function(x){return '<img data-k="'+esc(x.k)+'" onclick="showImg(\''+esc(x.k)+'\')" alt="">'}).join('')+'</div></div>';
-  if(can('edit'))h+='<div class="btns"><button class="btn dng sm" onclick="btDel('+e.id+')">حذف الحركة</button></div>';
+  h+=(e.note?'<div class="sec">نص كشف البنك</div><div class="card"><div class="note" dir="ltr" style="margin:0;text-align:left">'+esc(e.note)+'</div></div>':'')+(e.eby?'<p class="note">آخر تعديل: '+esc(e.eby)+' · '+fdt(e.eat)+'</p>':'');
+  if(can('edit'))h+='<div class="btns"><button class="btn g sm" onclick="back();btForm(\''+e.bank+'\',\''+e.k+'\','+e.id+')">تعديل الحركة</button><button class="btn dng sm" onclick="btDel('+e.id+')">حذف الحركة</button></div>';
   return h})}
 function btDel(id){confirmBox('حذف الحركة دي؟','حذف',function(){op({t:'bt.del',id:id},'تم حذف الحركة').then(function(){back();render()},function(){})})}
 function bankRows(id){var b=bkM()[id],bal=+b.open||0,r=[['التاريخ','الوصف','التفاصيل','وارد','منصرف','الرصيد']];r.push([b.start,'رصيد أول المدة','','','',bal]);

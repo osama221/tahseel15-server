@@ -119,7 +119,7 @@ const trConf = m => Object.assign({ start: TR_START, open: 0 }, m.trc || {}, { s
 const ccList = m => m.ccs || projects(m).map(p => ({ id: 'cc-' + p.id, name: 'مشروع ' + p.name }))
   .concat([{ id: 'cc-adm', name: 'مصاريف إدارية عامة' }, { id: 'cc-sal', name: 'رواتب وأجور' }, { id: 'cc-mkt', name: 'تسويق وعمولات' }, { id: 'cc-misc', name: 'نثريات' }]);
 // Bank accounts: a collection lands on an account when its collection account text matches the account's name or one of its other names.
-const BTK = ['in', 'exp', 'wd', 'xfer'];
+const BTK = ['in', 'exp', 'out', 'wd', 'xfer'];
 const nk = s => String(s || '').toLowerCase().replace(/[\s._\-\/]+/g, '');
 const banks = m => m.banks || [];
 function bankOf(m) {
@@ -134,7 +134,7 @@ function trView(m) {
     if (p.cacc) { const a = accs[nk(p.cacc)] || (accs[nk(p.cacc)] = { n: 0, v: {} }); a.n++; a.v[p.cacc] = (a.v[p.cacc] || 0) + 1; }
     if (isCash(p) || !cm[p.c]) return;
     const b = bo(p);
-    if (b && p.cdate >= b.start) bcol.push({ p: p.id, bank: b.id, date: p.cdate, amt: p.amt, client: cm[p.c].client, unit: cm[p.c].unit || '', acc: p.cacc || '', by: p.cby || '', at: p.cat || '' });
+    if (b && p.cdate >= b.start && !(b.stmt && p.cdate <= b.stmt)) bcol.push({ p: p.id, bank: b.id, date: p.cdate, amt: p.amt, client: cm[p.c].client, unit: cm[p.c].unit || '', acc: p.cacc || '', by: p.cby || '', at: p.cat || '' });
   });
   const cash = m.payments.filter(p => isCash(p) && p.cdate >= cf.start && cm[p.c])
     .map(p => ({ p: p.id, date: p.cdate, amt: p.amt, client: cm[p.c].client, unit: cm[p.c].unit || '', by: p.cby || '', at: p.cat || '' }));
@@ -179,8 +179,25 @@ function forClient(m, q) {
 }
 
 // Sheet updates prepared on the server. Each is applied once, the next time an admin opens the app.
-const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data/update-pk-20261004.json') }];
-const pendingUpdates = m => !m ? [] : UPDATES.filter(x => !(m.applied || []).includes(x.id) && projects(m).some(p => p.id === x.need));
+const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data/update-pk-20261004.json') },
+  { id: 'ohm-837-2026-09', run: m => importStatement(m, require('../data/bank-ohm837-202609.json')) }];
+// A bank statement: sets the account's opening balance at the statement start and adds every line as a bank movement.
+// Collections recorded in the app up to the statement end are then not counted again (the statement already has them).
+function importStatement(m, s) {
+  m.seq = m.seq || {};
+  const l = banks(m).map(x => Object.assign({}, x));
+  let bk = l.find(x => [x.name].concat(x.keys || []).some(k => s.match.includes(nk(k))) || x.no === s.no);
+  if (!bk) { bk = { id: 'bk' + rid(6), name: s.name, keys: [] }; l.push(bk); }
+  bk.keys = [...new Set((bk.keys || []).concat(s.keys).filter(k => nk(k) !== nk(bk.name)))];
+  Object.assign(bk, { no: s.no, start: s.start, open: s.open, stmt: s.end });
+  m.banks = l;
+  if (s.cc && !ccList(m).some(c => c.id === s.cc.id)) m.ccs = ccList(m).concat(s.cc);
+  const have = new Set((m.bt || []).map(e => e.src).filter(Boolean));
+  let n = 0;
+  m.bt = (m.bt || []).concat(s.tx.filter(t => !have.has(t.src)).map(t => { n++; return clean(Object.assign({ id: (m.seq.bt = (m.seq.bt || 0) + 1), bank: bk.id, by: 'كشف البنك', at: t.date + 'T12:00:00.000Z' }, t)); }));
+  return 'استيراد كشف ' + bk.name + ' من ' + s.start + ' إلى ' + s.end + ': ' + n + ' حركة · رصيد أول ' + s.open + ' · رصيد آخر ' + s.close;
+}
+const pendingUpdates = m => !m ? [] : UPDATES.filter(x => !(m.applied || []).includes(x.id) && (!x.need || projects(m).some(p => p.id === x.need)));
 // A summary sheet gives only each client's collected total: mark the oldest unpaid instalments as collected until the total matches.
 function settle(m, upd) {
   let n = 0, sum = 0, cons = 0;
@@ -204,8 +221,9 @@ async function applyUpdates() {
     const todo = pendingUpdates(m);
     if (!todo.length) return { skip: true, v: m };
     for (const x of todo) {
-      const upd = x.load(), r = settle(m, upd);
       m.applied = (m.applied || []).concat(x.id);
+      if (x.run) { m.log.push({ at: new Date().toISOString(), by: 'تحديث', d: x.run(m) }); continue; }
+      const upd = x.load(), r = settle(m, upd);
       m.log.push({ at: new Date().toISOString(), by: upd.by, d: 'تحديث ' + x.id + ': ' + r.n + ' قسط اتسجل محصّل لـ ' + r.cons + ' عميل بإجمالي ' + Math.round(r.sum) });
     }
     m.rev = (m.rev || 0) + 1;
@@ -234,7 +252,7 @@ async function op(u, b) {
     if (!b.photo) bad('صورة مستند التحصيل إجبارية');
     doc = { k: await savePhoto(b.photo, 'p' + (+b.id || 0)), at, by: u.name };
   }
-  if ((t === 'tr.add' || t === 'bt.add') && b.photo) { need(u, 'treasury'); doc = { k: await savePhoto(b.photo, t === 'tr.add' ? 'tr' : 'bt'), at, by: u.name }; }
+  if (/^(tr|bt)\.(add|edit)$/.test(t) && b.photo) { need(u, 'treasury'); doc = { k: await savePhoto(b.photo, t.slice(0, 2)), at, by: u.name }; }
   const r = await mutate(MAIN, m => {
     m = m || empty();
     const P = id => { const p = m.payments.find(x => x.id === +id) || bad('الدفعة غير موجودة', 404); C(p.c); return p; };
@@ -293,8 +311,10 @@ async function op(u, b) {
       if (!RS.includes(b.st)) bad('حالة غير صحيحة');
       Object.assign(q, { st: b.st, reply: str(b.reply, 1000), uat: at, uby: u.name }); clean(q);
       d = 'تحديث طلب #' + q.id + ' إلى ' + b.st;
-    } else if (t === 'tr.add') {
+    } else if (t === 'tr.add' || t === 'tr.edit') {
       need(u, 'treasury');
+      const old = t === 'tr.edit' ? (need(u, 'edit'), (m.tr || []).find(x => x.id === +b.id) || bad('القيد غير موجود', 404)) : null;
+      if (old) b.k = old.k;
       const amt = Math.round(+b.amt * 100) / 100, desc = str(b.desc, 200);
       if (!TRK.includes(b.k) || !(amt > 0)) bad('بيانات القيد غير مكتملة');
       if (!isDate(b.date) || b.date > T) bad('تاريخ القيد غير صحيح');
@@ -304,14 +324,20 @@ async function op(u, b) {
       let bk = null;
       if (b.k === 'dep') {
         bk = banks(m).find(x => x.id === b.bank && !x.off) || bad('اختار حساب البنك اللي اتعمل فيه الإيداع');
-        if (!doc) bad('صورة إيصال الإيداع إجبارية');
+        if (!doc && !(old && old.docs && old.docs.length)) bad('صورة إيصال الإيداع إجبارية');
         if (b.date < bk.start) bad('التاريخ قبل بداية حساب البنك');
       }
-      m.seq.tr = (m.seq.tr || 0) + 1;
-      const e = clean({ id: m.seq.tr, date: b.date, k: b.k, amt, desc, cc: cc ? cc.id : '', bank: bk ? bk.id : '', who: str(b.who, 80), ref: str(b.ref, 40), by: u.name, at });
-      if (doc) e.docs = [doc];
-      m.tr = (m.tr || []).concat(e);
-      d = (b.k === 'in' ? 'وارد للخزنة ' : b.k === 'dep' ? 'إيداع من الخزنة في ' + bk.name + ' ' : 'مصروف ') + amt + ' · ' + desc + (cc ? ' · ' + cc.name : '');
+      const f = { date: b.date, k: b.k, amt, desc, cc: cc ? cc.id : '', bank: bk ? bk.id : '', who: str(b.who, 80), ref: str(b.ref, 40) };
+      if (old) {
+        ['cc', 'bank', 'who', 'ref'].forEach(k => delete old[k]); Object.assign(old, f, { eby: u.name, eat: at }); clean(old);
+        if (doc) old.docs = (old.docs || []).concat(doc);
+      } else {
+        m.seq.tr = (m.seq.tr || 0) + 1;
+        const e = clean(Object.assign({ id: m.seq.tr }, f, { by: u.name, at }));
+        if (doc) e.docs = [doc];
+        m.tr = (m.tr || []).concat(e);
+      }
+      d = (old ? 'تعديل قيد خزنة: ' : '') + (b.k === 'in' ? 'وارد للخزنة ' : b.k === 'dep' ? 'إيداع من الخزنة في ' + bk.name + ' ' : 'مصروف ') + amt + ' · ' + desc + (cc ? ' · ' + cc.name : '');
     } else if (t === 'tr.del') {
       need(u, 'treasury'); need(u, 'edit');
       const e = (m.tr || []).find(x => x.id === +b.id) || bad('القيد غير موجود', 404);
@@ -345,9 +371,11 @@ async function op(u, b) {
       Object.assign(x, { name, no: str(b.no, 40), keys, start: b.start, open }); if (b.off) x.off = true; else delete x.off; clean(x);
       m.banks = l;
       d = (b.id ? 'تعديل' : 'إضافة') + ' حساب بنك: ' + name + ' · رصيد أول المدة ' + open + ' بتاريخ ' + b.start;
-    } else if (t === 'bt.add') {
+    } else if (t === 'bt.add' || t === 'bt.edit') {
       need(u, 'treasury');
-      const bk = banks(m).find(x => x.id === b.bank && !x.off) || bad('الحساب غير موجود', 404);
+      const old = t === 'bt.edit' ? (need(u, 'edit'), (m.bt || []).find(x => x.id === +b.id) || bad('الحركة غير موجودة', 404)) : null;
+      if (old) b.bank = old.bank;
+      const bk = banks(m).find(x => x.id === b.bank && (!x.off || old)) || bad('الحساب غير موجود', 404);
       const amt = Math.round(+b.amt * 100) / 100, desc = str(b.desc, 200);
       if (!BTK.includes(b.k) || !(amt > 0)) bad('بيانات الحركة غير مكتملة');
       if (!isDate(b.date) || b.date > T || b.date < bk.start) bad('تاريخ الحركة غير صحيح (قبل بداية الحساب أو في المستقبل)');
@@ -356,11 +384,17 @@ async function op(u, b) {
       const to = b.k === 'xfer' ? (banks(m).find(x => x.id === b.to && !x.off && x.id !== bk.id) || bad('اختار الحساب المحوّل إليه')) : null;
       if (to && b.date < to.start) bad('التاريخ قبل بداية الحساب المحوّل إليه');
       if (b.k === 'wd' && b.date < trConf(m).start) bad('التاريخ قبل بداية حساب الخزنة');
-      m.seq.bt = (m.seq.bt || 0) + 1;
-      const e = clean({ id: m.seq.bt, bank: bk.id, date: b.date, k: b.k, amt, desc, cc: cc ? cc.id : '', to: to ? to.id : '', who: str(b.who, 80), ref: str(b.ref, 40), by: u.name, at });
-      if (doc) e.docs = [doc];
-      m.bt = (m.bt || []).concat(e);
-      d = bk.name + ': ' + ({ in: 'إيداع ', exp: 'مصروف ', wd: 'سحب للخزنة ', xfer: 'تحويل إلى ' + (to ? to.name : '') + ' ' })[b.k] + amt + ' · ' + desc + (cc ? ' · ' + cc.name : '');
+      const f = { bank: bk.id, date: b.date, k: b.k, amt, desc, cc: cc ? cc.id : '', to: to ? to.id : '', who: str(b.who, 80), ref: str(b.ref, 40) };
+      if (old) {
+        ['cc', 'to', 'who', 'ref'].forEach(k => delete old[k]); Object.assign(old, f, { eby: u.name, eat: at }); clean(old);
+        if (doc) old.docs = (old.docs || []).concat(doc);
+      } else {
+        m.seq.bt = (m.seq.bt || 0) + 1;
+        const e = clean(Object.assign({ id: m.seq.bt }, f, { by: u.name, at }));
+        if (doc) e.docs = [doc];
+        m.bt = (m.bt || []).concat(e);
+      }
+      d = (old ? 'تعديل حركة · ' : '') + bk.name + ': ' + ({ in: 'إيداع ', exp: 'مصروف ', out: 'صرف ', wd: 'سحب للخزنة ', xfer: 'تحويل إلى ' + (to ? to.name : '') + ' ' })[b.k] + amt + ' · ' + desc + (cc ? ' · ' + cc.name : '');
     } else if (t === 'bt.del') {
       need(u, 'treasury'); need(u, 'edit');
       const e = (m.bt || []).find(x => x.id === +b.id) || bad('الحركة غير موجودة', 404);
