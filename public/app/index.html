@@ -283,6 +283,7 @@ function vLogin(){
    +'<label class="f">كلمة السر</label><input class="inp" id="l_p" type="password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')doLogin()">'
    +(LERR?'<div class="err">'+esc(LERR)+'</div>':'')
    +'<div class="btns"><button class="btn" id="l_b" onclick="doLogin()">دخول</button></div>'
+   +(window.Native?'':'<a class="btn g" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;text-decoration:none" href="/download/tahseel-raya.apk" download>📱 تحميل تطبيق أندرويد</a>')
    +'<details style="margin-top:18px"><summary class="note">إعدادات الاتصال</summary><label class="f">عنوان السيرفر</label><input class="inp" id="l_s" dir="ltr" value="'+esc(BASE)+'" placeholder="https://…"></details></div>';
 }
 function doLogin(){
@@ -808,6 +809,7 @@ function vSet(){
   var s=LS,st=JSON.parse(N.notifStatus()||'{}'),h='';
   h+=addBanner();
   if(st.perm===false)h+='<div class="banner">إذن الإشعارات مقفول على الموبايل. <button onclick="N.requestNotifPerm()">السماح بالإشعارات</button></div>';
+  if(!window.Native)h+='<div class="sec" style="margin-top:4px">تطبيق الموبايل</div><div class="card"><div class="note" style="margin-top:0">نزّل تطبيق أندرويد على موبايلك — بيشتغل بنفس الحساب وفيه إشعارات التحصيل. لو التطبيق متسطّب قبل كده، التحميل بيحدّثه.</div><div class="btns"><a class="btn k sm" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="/download/tahseel-raya.apk" download>📱 تحميل تطبيق أندرويد</a><button class="btn g sm" onclick="copyTxt(location.origin+\'/download/tahseel-raya.apk\')">نسخ اللينك</button></div></div>';
   h+='<div class="sec" style="margin-top:4px">الحساب</div><div class="card">'+kv('الاسم',esc(D.me.name))+kv('اسم المستخدم','<span class="num">'+esc(D.me.username)+'</span>')+kv('الدور',admin()?'أدمن (كل الصلاحيات)':'مستخدم')+'<div class="btns"><button class="btn g sm" onclick="pwSheet()">تغيير كلمة السر</button><button class="btn g sm" onclick="sync()">تحديث البيانات</button><button class="btn dng sm" onclick="confirmBox(\'تسجيل الخروج؟\',\'خروج\',logout)">خروج</button></div></div>';
   if(admin()){
     h+='<div class="sec">المستخدمين والصلاحيات</div><div class="list">'+(D.users||[]).map(function(u){return '<button class="row" onclick="userForm(\''+u.id+'\')"><span class="m"><div class="n">'+esc(u.name)+'</div><div class="u"><span class="num">'+esc(u.username)+'</span> · '+(u.role==='admin'?'أدمن':Object.keys(u.perms||{}).length+' صلاحية'+((u.projs||[]).length?' · '+u.projs.map(pname).join('، '):''))+'</div></span><span class="a">'+(u.active?'<span class="tag done">مفعّل</span>':'<span class="tag cancelled">موقوف</span>')+'</span></button>'}).join('')+'</div><div class="btns"><button class="btn k sm" onclick="userForm()">+ مستخدم جديد</button><button class="btn g sm" onclick="logSheet()">سجل الحركات</button></div><div class="btns"><button class="btn g sm" onclick="bkSheet()">النسخ الاحتياطية</button></div>';
