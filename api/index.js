@@ -184,7 +184,22 @@ const UPDATES = [{ id: 'pk-2026-10-04', need: 'pk', load: () => require('../data
   { id: 'ohm-837-2026-09', run: m => importStatement(m, require('../data/bank-ohm837-202609.json')) },
   { id: 'raya-203-2025-2026', run: m => importStatement(m, require('../data/bank-raya203-2025-2026.json')) },
   { id: 'raya-203-2026-10-15', run: m => importStatement(m, require('../data/bank-raya203-202610.json')) },
-  { id: 'ohm-837-2026-10-15', run: m => importStatement(m, require('../data/bank-ohm837-202610.json')) }];
+  { id: 'ohm-837-2026-10-15', run: m => importStatement(m, require('../data/bank-ohm837-202610.json')) },
+  { id: 'link-ohm-raya-2026-10', run: m => linkTransfers(m, [['ohm837-202609-018', 'raya203-1775'], ['ohm837-202610-0009', 'raya203-202610-0006']]) }];
+// The same transfer seen in both statements (out of one account, into the other) becomes one transfer between the two accounts.
+function linkTransfers(m, pairs) {
+  const by = {}; (m.bt || []).forEach(e => { if (e.src) by[e.src] = e; });
+  const bm = {}; banks(m).forEach(b => bm[b.id] = b);
+  const drop = new Set(); let n = 0, sum = 0;
+  for (const [o, i] of pairs) {
+    const out = by[o], inn = by[i];
+    if (!out || !inn || out.k !== 'out' || inn.k !== 'in' || Math.abs(out.amt - inn.amt) > 0.01) continue;
+    Object.assign(out, { k: 'xfer', to: inn.bank, desc: 'تحويل بين الحسابات', src2: inn.src });
+    drop.add(inn); n++; sum += out.amt;
+  }
+  m.bt = m.bt.filter(e => !drop.has(e));
+  return 'ربط ' + n + ' تحويل بين الحسابات بإجمالي ' + sum;
+}
 // A bank statement: sets the account's opening balance at the statement start and adds every line as a bank movement.
 // Collections recorded in the app up to the statement end are then not counted again (the statement already has them).
 function importStatement(m, s) {
