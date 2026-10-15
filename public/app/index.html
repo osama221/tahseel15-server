@@ -130,7 +130,7 @@ header .off{background:#7a4100;color:#ffe2b8;border-radius:6px;padding:1px 6px;f
 <script>
 var SEED=/*__SEED__*/null;
 var PATCHES=[{"v":2,"ops":[{"c":"cn0039","due":"2026-08-20","type":"inst","total":70500,"parts":[{"amt":70000,"cdate":"2026-08-20","cacc":"ohm 837"},{"amt":500,"cdate":"2026-08-20","cacc":"ohm 837"}]},{"c":"cn0040","due":"2026-09-15","type":"inst","total":97500,"parts":[{"amt":50000,"cdate":"2026-09-14","cacc":"ohm 837"},{"amt":47500,"cdate":"2026-09-14","cacc":"ohm 837"}]},{"c":"cn0031","due":"2026-09-15","type":"inst","total":71000,"parts":[{"amt":71000,"cdate":"2026-09-19","cacc":"cash","rcpt":"2984"}]},{"c":"cn0027","due":"2026-09-20","type":"inst","total":70000,"parts":[{"amt":70000,"cdate":"2026-09-28","cacc":"ohm 837"}]}]}];
-var DEFAULT_BASE="https://tahseel15.vercel.app";
+var DEFAULT_BASE="";
 </script>
 <script>
 "use strict";
@@ -272,7 +272,7 @@ function render(){
   var b=buckets(),nb=b.od.length+b.td.length,nr=(D.requests||[]).filter(function(q){return q.st==='new'}).length;
   nav.innerHTML=tabs().map(function(x){var n=x[0]==='pay'?nb:x[0]==='req'?nr:0;return '<button class="'+(TAB===x[0]?'on':'')+'" onclick="go(\''+x[0]+'\')"><svg viewBox="0 0 24 24">'+ICON[x[0]]+'</svg>'+x[1]+(n?'<span class="dot">'+n+'</span>':'')+'</button>'}).join('');
   if(admin()&&D.empty){main.innerHTML=vImport();return}
-  main.innerHTML=TAB==='home'?vHome(b):TAB==='col'?vCol():TAB==='pay'?vPay(b):TAB==='con'?vCon():TAB==='req'?vReq():TAB==='tr'?vTr():vSet();
+  main.innerHTML=(TAB!=='set'?updBanner():'')+(TAB==='home'?vHome(b):TAB==='col'?vCol():TAB==='pay'?vPay(b):TAB==='con'?vCon():TAB==='req'?vReq():TAB==='tr'?vTr():vSet());
 }
 
 /* ---------- login ---------- */
@@ -627,6 +627,30 @@ function expList(r){var bm=bkM();
    .concat((D.tr.bt||[]).filter(function(e){return e.k==='exp'}).map(function(e){return Object.assign({src:'bt',srcn:(bm[e.bank]||{}).name||'بنك'},e)}))
    .filter(function(e){return e.date>=r[0]&&e.date<=r[1]})}
 
+
+/* ---------- app update (Android) ---------- */
+var UPD=null,UPDST='';
+function appV(){try{return window.Native&&N.appVersion?JSON.parse(N.appVersion()):{}}catch(e){return {}}}
+function updURL(){return (BASE||location.origin)+'/download/tahseel-raya.apk'}
+function checkUpd(manual){
+  if(!window.Native||!N.appVersion){if(manual)toast('التحديث من جوه التطبيق بس');return}
+  if(manual)toast('جاري البحث عن تحديث…');
+  fetch((BASE||'')+'/download/version.json?t='+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(v){
+    var cur=appV();UPD=v&&+v.code>+(cur.code||0)?v:null;
+    if(manual)toast(UPD?'فيه نسخة جديدة '+v.name:'إنت على آخر نسخة ('+(cur.name||'')+')');
+    if(SCREEN==='app')render()},function(){if(manual)toast('تعذّر الاتصال بالسيرفر')})}
+function doUpd(){if(!UPD){checkUpd(true);return}if(UPDST==='dl')return;UPDST='dl';toast('جاري تنزيل التحديث…');N.updateApp(updURL())}
+window.onUpd=function(st,p){UPDST=st;
+  if(st==='dl'){if(p%10===0)toast('جاري تنزيل التحديث… '+p+'%')}
+  else if(st==='perm')toast('اسمح للتطبيق بتثبيت التحديثات من الشاشة اللي فتحت، وارجع دوس «تحديث» تاني');
+  else if(st==='inst')toast('اضغط «تثبيت» علشان يكمل التحديث');
+  else if(st==='err')toast('تعذّر تنزيل التحديث — جرّب تاني أو نزّله من الموقع');
+  render()}
+function updBanner(){return UPD?'<div class="banner">فيه تحديث جديد للتطبيق (نسخة '+esc(UPD.name)+')'+(UPD.notes?'<br><small>'+esc(UPD.notes)+'</small>':'')+' <button onclick="doUpd()">'+(UPDST==='dl'?'جاري التنزيل…':'تحديث الآن')+'</button></div>':''}
+function updCard(){if(!window.Native)return '';var c=appV();
+  return '<div class="sec" style="margin-top:4px">تحديث التطبيق</div><div class="card">'+kv('النسخة الحالية','<span class="num">'+esc(c.name||'—')+'</span>')+(UPD?kv('النسخة الجديدة','<span class="num">'+esc(UPD.name)+'</span>'):'')
+   +'<div class="btns">'+(UPD?'<button class="btn k sm" onclick="doUpd()">'+(UPDST==='dl'?'جاري التنزيل…':'تحديث الآن')+'</button>':'<button class="btn g sm" onclick="checkUpd(true)">البحث عن تحديث</button>')+'</div></div>'}
+
 /* ---------- collections ---------- */
 function filtered(){
   var k=F.k,q=norm(F.q),a=DP.filter(function(p){
@@ -852,6 +876,7 @@ function vSet(){
   var s=LS,st=JSON.parse(N.notifStatus()||'{}'),h='';
   h+=addBanner();
   if(st.perm===false)h+='<div class="banner">إذن الإشعارات مقفول على الموبايل. <button onclick="N.requestNotifPerm()">السماح بالإشعارات</button></div>';
+  h+=updCard();
   if(!window.Native)h+='<div class="sec" style="margin-top:4px">تطبيق الموبايل</div><div class="card"><div class="note" style="margin-top:0">نزّل تطبيق أندرويد على موبايلك — بيشتغل بنفس الحساب وفيه إشعارات التحصيل. لو التطبيق متسطّب قبل كده، التحميل بيحدّثه.</div><div class="btns"><a class="btn k sm" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="/download/tahseel-raya.apk" download>📱 تحميل تطبيق أندرويد</a><button class="btn g sm" onclick="copyTxt(location.origin+\'/download/tahseel-raya.apk\')">نسخ اللينك</button></div></div>';
   h+='<div class="sec" style="margin-top:4px">الحساب</div><div class="card">'+kv('الاسم',esc(D.me.name))+kv('اسم المستخدم','<span class="num">'+esc(D.me.username)+'</span>')+kv('الدور',admin()?'أدمن (كل الصلاحيات)':'مستخدم')+'<div class="btns"><button class="btn g sm" onclick="pwSheet()">تغيير كلمة السر</button><button class="btn g sm" onclick="sync()">تحديث البيانات</button><button class="btn dng sm" onclick="confirmBox(\'تسجيل الخروج؟\',\'خروج\',logout)">خروج</button></div></div>';
   if(admin()){
@@ -898,6 +923,7 @@ function exportX(){
 window.onNative=function(m){toast(m);render()};
 /* ---------- start ---------- */
 boot();
+setTimeout(function(){checkUpd(false)},3000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)sync(true)});
 setInterval(function(){if(!document.hidden&&SCREEN==='app'&&!BUSY)sync(true)},90000);
 </script>
