@@ -57,9 +57,24 @@ async function mutate(path, fn) {
     const { v, etag } = await store.read(path, true);
     const out = await fn(v);
     if (out.skip) return out;
-    try { await store.write(path, out.v, etag); return out; }
+    try { await store.write(path, out.v, etag); if (path === MAIN) await writeMeta(out.v); return out; }
     catch (e) { if (!e.conflict) throw e; if (i >= 5) bad('السيرفر مشغول، حاول مرة أخرى', 503); await new Promise(r => setTimeout(r, 60 * (i + 1) * Math.random())); }
   }
+}
+
+// A small summary of the main document (revision, applied updates, latest collections).
+// The phones poll it every minute or so; reading it instead of the multi-MB main document keeps the hosting usage low.
+const META = 'db/meta.json';
+function metaOf(m) {
+  m = m || empty(); const cm = {}; m.contracts.forEach(c => cm[c.id] = c);
+  const feed = m.payments.filter(p => p.st === 'done' && p.cat).sort((a, b) => a.cat < b.cat ? -1 : 1).slice(-60)
+    .map(p => ({ id: p.id, amt: p.amt, by: p.cby || '', at: p.cat, client: (cm[p.c] || {}).client || '', unit: (cm[p.c] || {}).unit || '', proj: projOf(cm[p.c] || {}) }));
+  return { rev: m.rev || 0, applied: m.applied || [], projs: projects(m).map(p => p.id), feed };
+}
+async function writeMeta(m) { for (let i = 0; i < 3; i++) { try { await store.putText(META, JSON.stringify(metaOf(m))); return; } catch (e) { if (i === 2) console.error('meta write failed', e.message); } } }
+async function readMeta() {
+  try { const t = await store.getText(META); if (t) return JSON.parse(t); } catch (e) {}
+  const m = (await store.read(MAIN)).v; await writeMeta(m); return metaOf(m);
 }
 
 /* ---------- users & auth ---------- */
@@ -595,18 +610,18 @@ module.exports = async (req, res) => {
     }
     if (r === 'restore') return send(200, view(forClient(await restore(u, b.name), q), u, us));
     if (r === 'data') {
-      let m = (await store.read(MAIN)).v;
-      if (u.role === 'admin' && q.get('v') && pendingUpdates(m).length) m = await applyUpdates();
+      const meta = await readMeta();
+      const upd = u.role === 'admin' && q.get('v') && UPDATES.some(x => !(meta.applied || []).includes(x.id) && (!x.need || (meta.projs || []).includes(x.need)));
       // unchanged since the phone's copy (same revision, same day): skip resending the whole dataset
-      if (m && q.get('rev') && +q.get('rev') === (m.rev || 0) + DATA_FMT && q.get('day') === today()) return send(200, { same: true, me: pub(u), nusers: us.users.length });
+      if (!upd && q.get('rev') && +q.get('rev') === (meta.rev || 0) + DATA_FMT && q.get('day') === today()) return send(200, { same: true, me: pub(u), nusers: us.users.length });
+      let m = (await store.read(MAIN)).v;
+      if (upd && pendingUpdates(m).length) m = await applyUpdates();
       return send(200, view(forClient(m, q), u, us));
     }
     if (r === 'feed') {   // collections recorded by other users since a given time (polled by the phones for notifications)
-      const m = forClient((await store.read(MAIN)).v, q) || empty(), since = q.get('since') || '', cm = {};
-      m.contracts.forEach(c => cm[c.id] = c);
-      const items = !can(u, 'viewAll') ? [] : m.payments.filter(p => p.st === 'done' && p.cat && p.cat > since && p.cby !== u.name && cm[p.c] && inScope(u, cm[p.c]))
-        .map(p => ({ id: p.id, amt: p.amt, by: p.cby || '', at: p.cat, client: (cm[p.c] || {}).client || '', unit: (cm[p.c] || {}).unit || '' }))
-        .sort((x, y) => x.at < y.at ? -1 : 1).slice(-20);
+      const meta = await readMeta(), since = q.get('since') || '';
+      const items = !can(u, 'viewAll') ? [] : (meta.feed || []).filter(p => p.at > since && p.by !== u.name && inScope(u, p) && (q.get('v') || p.proj === 's15'))
+        .map(p => ({ id: p.id, amt: p.amt, by: p.by, at: p.at, client: p.client, unit: p.unit })).slice(-20);
       return send(200, { now: new Date().toISOString(), items });
     }
     if (r === 'op') return send(200, view(forClient(await op(u, b), q), u, us));
