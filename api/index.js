@@ -43,7 +43,7 @@ function blobStore() {
 }
 
 const MAIN = 'db/main.json', USERS = 'db/users.json';
-const PERMS = ['viewAll', 'dashboard', 'contact', 'collect', 'edit', 'requests', 'export', 'treasury'];
+const PERMS = ['viewAll', 'dashboard', 'contact', 'collect', 'edit', 'requests', 'export', 'treasury', 'approve'];
 const SECRET = process.env.AUTH_SECRET || '';
 class Err extends Error { constructor(code, msg) { super(msg); this.code = code; } }
 const bad = (m, c) => { throw new Err(c || 400, m); };
@@ -130,7 +130,10 @@ async function login(b) {
 const DATA_FMT = 1e6;
 const TR_START = '2026-10-15', TRK = ['in', 'exp', 'dep'];
 const isCash = p => p.st === 'done' && !!p.cdate && (!!p.tr || /cash|كاش|نقد|خزن/i.test(p.cacc || ''));
-const trConf = m => Object.assign({ start: TR_START, open: 0 }, m.trc || {}, { set: !!m.trc });
+const trConf = m => Object.assign({ start: TR_START, open: 0, appr: true }, m.trc || {}, { set: !!m.trc });
+// Entries made by hand wait for a second person's approval (when the admin keeps approvals on); until then they do not count.
+const mine = (e, u) => e.uid ? e.uid === u.id : e.by === u.name;
+const pendSt = m => trConf(m).appr ? 'p' : '';
 const ccList = m => m.ccs || projects(m).map(p => ({ id: 'cc-' + p.id, name: 'مشروع ' + p.name }))
   .concat([{ id: 'cc-adm', name: 'مصاريف إدارية عامة' }, { id: 'cc-sal', name: 'رواتب وأجور' }, { id: 'cc-mkt', name: 'تسويق وعمولات' }, { id: 'cc-misc', name: 'نثريات' }]);
 // Bank accounts: a collection lands on an account when its collection account text matches the account's name or one of its other names.
@@ -355,7 +358,8 @@ async function op(u, b) {
       d = 'تحديث طلب #' + q.id + ' إلى ' + b.st;
     } else if (t === 'tr.add' || t === 'tr.edit') {
       need(u, 'treasury');
-      const old = t === 'tr.edit' ? (need(u, 'edit'), (m.tr || []).find(x => x.id === +b.id) || bad('القيد غير موجود', 404)) : null;
+      const old = t === 'tr.edit' ? ((m.tr || []).find(x => x.id === +b.id) || bad('القيد غير موجود', 404)) : null;
+      if (old && !can(u, 'edit') && !(mine(old, u) && old.st)) bad('ليس لديك صلاحية لهذا الإجراء', 403);
       if (old) b.k = old.k;
       const amt = Math.round(+b.amt * 100) / 100, desc = str(b.desc, 200);
       if (!TRK.includes(b.k) || !(amt > 0)) bad('بيانات القيد غير مكتملة');
@@ -371,18 +375,19 @@ async function op(u, b) {
       }
       const f = { date: b.date, k: b.k, amt, desc, cc: cc ? cc.id : '', bank: bk ? bk.id : '', who: str(b.who, 80), ref: str(b.ref, 40) };
       if (old) {
-        ['cc', 'bank', 'who', 'ref'].forEach(k => delete old[k]); Object.assign(old, f, { eby: u.name, eat: at }); clean(old);
+        ['cc', 'bank', 'who', 'ref', 'st', 'aby', 'aat', 'rnote'].forEach(k => delete old[k]); Object.assign(old, f, { eby: u.name, eat: at, st: pendSt(m) }); clean(old);
         if (doc) old.docs = (old.docs || []).concat(doc);
       } else {
         m.seq.tr = (m.seq.tr || 0) + 1;
-        const e = clean(Object.assign({ id: m.seq.tr }, f, { by: u.name, at }));
+        const e = clean(Object.assign({ id: m.seq.tr }, f, { by: u.name, uid: u.id, at, st: pendSt(m) }));
         if (doc) e.docs = [doc];
         m.tr = (m.tr || []).concat(e);
       }
       d = (old ? 'تعديل قيد خزنة: ' : '') + (b.k === 'in' ? 'وارد للخزنة ' : b.k === 'dep' ? 'إيداع من الخزنة في ' + bk.name + ' ' : 'مصروف ') + amt + ' · ' + desc + (cc ? ' · ' + cc.name : '');
     } else if (t === 'tr.del') {
-      need(u, 'treasury'); need(u, 'edit');
+      need(u, 'treasury');
       const e = (m.tr || []).find(x => x.id === +b.id) || bad('القيد غير موجود', 404);
+      if (!can(u, 'edit') && !(mine(e, u) && e.st)) bad('ليس لديك صلاحية لهذا الإجراء', 403);
       m.tr = m.tr.filter(x => x !== e);
       d = 'حذف قيد خزنة ' + e.amt + ' · ' + e.desc;
     } else if (t === 'cc.save') {
@@ -415,7 +420,8 @@ async function op(u, b) {
       d = (b.id ? 'تعديل' : 'إضافة') + ' حساب بنك: ' + name + ' · رصيد أول المدة ' + open + ' بتاريخ ' + b.start;
     } else if (t === 'bt.add' || t === 'bt.edit') {
       need(u, 'treasury');
-      const old = t === 'bt.edit' ? (need(u, 'edit'), (m.bt || []).find(x => x.id === +b.id) || bad('الحركة غير موجودة', 404)) : null;
+      const old = t === 'bt.edit' ? ((m.bt || []).find(x => x.id === +b.id) || bad('الحركة غير موجودة', 404)) : null;
+      if (old && !can(u, 'edit') && !(mine(old, u) && old.st)) bad('ليس لديك صلاحية لهذا الإجراء', 403);
       if (old) b.bank = old.bank;
       const bk = banks(m).find(x => x.id === b.bank && (!x.off || old)) || bad('الحساب غير موجود', 404);
       const amt = Math.round(+b.amt * 100) / 100, desc = str(b.desc, 200);
@@ -428,25 +434,35 @@ async function op(u, b) {
       if (b.k === 'wd' && b.date < trConf(m).start) bad('التاريخ قبل بداية حساب الخزنة');
       const f = { bank: bk.id, date: b.date, k: b.k, amt, desc, cc: cc ? cc.id : '', to: to ? to.id : '', who: str(b.who, 80), ref: str(b.ref, 40) };
       if (old) {
-        ['cc', 'to', 'who', 'ref'].forEach(k => delete old[k]); Object.assign(old, f, { eby: u.name, eat: at }); clean(old);
+        ['cc', 'to', 'who', 'ref', 'st', 'aby', 'aat', 'rnote'].forEach(k => delete old[k]); Object.assign(old, f, { eby: u.name, eat: at, st: pendSt(m) }); clean(old);
         if (doc) old.docs = (old.docs || []).concat(doc);
       } else {
         m.seq.bt = (m.seq.bt || 0) + 1;
-        const e = clean(Object.assign({ id: m.seq.bt }, f, { by: u.name, at }));
+        const e = clean(Object.assign({ id: m.seq.bt }, f, { by: u.name, uid: u.id, at, st: pendSt(m) }));
         if (doc) e.docs = [doc];
         m.bt = (m.bt || []).concat(e);
       }
       d = (old ? 'تعديل حركة · ' : '') + bk.name + ': ' + ({ in: 'إيداع ', exp: 'مصروف ', out: 'صرف ', wd: 'سحب للخزنة ', xfer: 'تحويل إلى ' + (to ? to.name : '') + ' ' })[b.k] + amt + ' · ' + desc + (cc ? ' · ' + cc.name : '');
     } else if (t === 'bt.del') {
-      need(u, 'treasury'); need(u, 'edit');
+      need(u, 'treasury');
       const e = (m.bt || []).find(x => x.id === +b.id) || bad('الحركة غير موجودة', 404);
+      if (!can(u, 'edit') && !(mine(e, u) && e.st)) bad('ليس لديك صلاحية لهذا الإجراء', 403);
       m.bt = m.bt.filter(x => x !== e);
       d = 'حذف حركة بنك ' + e.amt + ' · ' + e.desc;
+    } else if (t === 'appr') {
+      need(u, 'approve');
+      const list = b.src === 'bt' ? (m.bt || []) : (m.tr || []);
+      const e = list.find(x => x.id === +b.id) || bad('القيد غير موجود', 404);
+      if (e.st !== 'p' && !(e.st === 'r' && b.ok)) bad('القيد ده مش منتظر اعتماد');
+      if (mine(e, u)) bad('مينفعش تعتمد قيد إنت اللي سجلته — لازم حد تاني يراجعه', 403);
+      if (b.ok) { delete e.st; delete e.rnote; Object.assign(e, { aby: u.name, aat: at }); }
+      else { const note = str(b.note, 300); if (!note) bad('اكتب سبب الرفض'); Object.assign(e, { st: 'r', rnote: note, aby: u.name, aat: at }); }
+      d = (b.ok ? 'اعتماد ' : 'رفض ') + (b.src === 'bt' ? 'حركة بنك ' : 'قيد خزنة ') + e.amt + ' · ' + e.desc + (b.ok ? '' : ' · السبب: ' + str(b.note, 300));
     } else if (t === 'tr.conf') {
       if (u.role !== 'admin') bad('للأدمن فقط', 403);
       const open = Math.round(+b.open * 100) / 100;
       if (!isDate(b.start) || b.start > T || !isFinite(open)) bad('بيانات غير صحيحة');
-      m.trc = { start: b.start, open };
+      m.trc = { start: b.start, open, appr: b.appr !== false };
       d = 'ضبط الخزنة: رصيد أول المدة ' + open + ' بتاريخ ' + b.start;
     } else if (t === 'addprojects') {
       if (u.role !== 'admin') bad('للأدمن فقط', 403);
