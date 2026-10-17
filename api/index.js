@@ -129,7 +129,7 @@ async function login(b) {
 // Added to the revision the phones see: raising it makes every phone reload the full data once (after new data such as the treasury is added to the view).
 const DATA_FMT = 1e6;
 const TR_START = '2026-10-15', TRK = ['in', 'exp', 'dep'];
-const isCash = p => p.st === 'done' && !!p.cdate && (!!p.tr || /cash|كاش|نقد|خزن/i.test(p.cacc || ''));
+const isCash = p => p.st === 'done' && !p.ap && !!p.cdate && (!!p.tr || /cash|كاش|نقد|خزن/i.test(p.cacc || ''));
 const trConf = m => Object.assign({ start: TR_START, open: 0, appr: true }, m.trc || {}, { set: !!m.trc });
 // Entries made by hand wait for a second person's approval (when the admin keeps approvals on); until then they do not count.
 const mine = (e, u) => e.uid ? e.uid === u.id : e.by === u.name;
@@ -144,13 +144,26 @@ function bankOf(m) {
   const k = {}; banks(m).forEach(b => [b.name].concat(b.keys || []).forEach(x => { if (nk(x)) k[nk(x)] = b; }));
   return p => (p.bk && banks(m).find(b => b.id === p.bk)) || k[nk(p.cacc)];
 }
+function apprList(m, u, cm) {
+  const L = [], ap = can(u, 'approve'), bm = {}; banks(m).forEach(b => bm[b.id] = b);
+  const take = (o, uid, by) => { const own = uid ? uid === u.id : by === u.name; if (ap || own) L.push(Object.assign(o, { own })); };
+  m.payments.forEach(p => { if (p.ap === 'p' && cm[p.c]) take({ src: 'pay', id: p.id, st: 'p', amt: p.amt, in: 1, date: p.cdate, desc: 'تحصيل · ' + cm[p.c].client, lbl: (cm[p.c].unit || '') + (p.cacc ? ' · ' + p.cacc : ''), by: p.cby || '', at: p.cat || '', cid: p.c }, p.cuid, p.cby); });
+  m.contracts.forEach(c => {
+    if (!cm[c.id]) return;
+    if (c.ap) take({ src: 'con', id: c.id, st: c.ap, amt: c.value || 0, in: 1, date: c.date || (c.cat || '').slice(0, 10), desc: 'عقد جديد · ' + c.client, lbl: c.unit || '', by: c.cby || '', at: c.cat || '', rnote: c.rnote || '', cid: c.id }, c.cuid, c.cby);
+    if (c.pend) take({ src: 'con', id: c.id, st: 'p', kind: 'cancel', amt: c.value || 0, in: 0, date: (c.pend.at || '').slice(0, 10), desc: 'فسخ عقد · ' + c.client, lbl: (c.unit || '') + (c.pend.note ? ' · ' + c.pend.note : ''), by: c.pend.by, at: c.pend.at, cid: c.id }, c.pend.uid, c.pend.by);
+  });
+  (m.tr || []).forEach(e => { if (e.st) take({ src: 'tr', id: e.id, st: e.st, amt: e.amt, in: e.k === 'in' ? 1 : 0, date: e.date, desc: e.desc, lbl: 'الخزنة · ' + ({ in: 'وارد', exp: 'مصروف', dep: 'إيداع بنك' })[e.k], by: e.by, at: e.at, rnote: e.rnote || '' }, e.uid, e.by); });
+  (m.bt || []).forEach(e => { if (e.st) take({ src: 'bt', id: e.id, st: e.st, amt: e.amt, in: e.k === 'in' ? 1 : 0, date: e.date, desc: e.desc, lbl: (bm[e.bank] || {}).name || 'بنك', by: e.by, at: e.at, rnote: e.rnote || '' }, e.uid, e.by); });
+  return L.sort((a, b) => (a.at || '') < (b.at || '') ? 1 : -1);
+}
 function trView(m) {
   const cf = trConf(m), cm = {}; m.contracts.forEach(c => cm[c.id] = c);
   const bo = bankOf(m), bcol = [], accs = {};
   m.payments.forEach(p => {
     if (p.st !== 'done' || !p.cdate) return;
     if (p.cacc) { const a = accs[nk(p.cacc)] || (accs[nk(p.cacc)] = { n: 0, v: {} }); a.n++; a.v[p.cacc] = (a.v[p.cacc] || 0) + 1; }
-    if (isCash(p) || !cm[p.c]) return;
+    if (isCash(p) || !cm[p.c] || p.ap) return;
     const b = bo(p);
     if (b && p.cdate >= b.start && !(b.stmt && p.cdate <= b.stmt)) bcol.push({ p: p.id, bank: b.id, date: p.cdate, amt: p.amt, client: cm[p.c].client, unit: cm[p.c].unit || '', acc: p.cacc || '', by: p.cby || '', at: p.cat || '' });
   });
@@ -184,6 +197,7 @@ function view(m, u, us) {
     requests: reqs ? m.requests.filter(q => cm[q.c]) : [] };
   if (reqs && !all) out.cidx = m.contracts.filter(c => cm[c.id] && c.st === 'active').map(c => ({ id: c.id, client: c.client, unit: c.unit, proj: projOf(c) }));
   if (can(u, 'treasury')) out.tr = trView(m);
+  out.appr = apprList(m, u, cm); out.apOn = trConf(m).appr;
   if (can(u, 'collect')) out.bks = banks(m).filter(b => !b.off).map(b => ({ id: b.id, name: b.name, stmt: b.stmt || '' }));
   if (u.role === 'admin') { out.users = us.users.map(pub); out.log = m.log.slice(-200).reverse(); out.canAdd = NEW_PROJECTS.some(id => !projects(m).some(p => p.id === id)); }
   return out;
@@ -310,12 +324,13 @@ async function op(u, b) {
       if (!isDate(b.cdate) || b.cdate > T) bad('تاريخ التحصيل غير صحيح');
       if (amt < p.amt) { const rest = Object.assign({}, p, { id: ++m.seq.pay, amt: Math.round((p.amt - amt) * 100) / 100, note: [p.note, 'باقي دفعة محصّلة جزئياً'].filter(Boolean).join(' · ') }); delete rest.docs; m.payments.push(rest); p.amt = amt; }
       Object.assign(p, { st: 'done', cdate: b.cdate, cacc: str(b.cacc, 60), rcpt: str(b.rcpt, 40), cby: u.name, cat: at }); clean(p);
+      if (pendSt(m)) Object.assign(p, { ap: 'p', cuid: u.id });
       if (b.cash) { p.tr = 1; if (!p.cacc) p.cacc = 'cash'; }
       else if (b.bank) { const bk = banks(m).find(x => x.id === b.bank && !x.off); if (bk) { p.bk = bk.id; if (!p.cacc) p.cacc = bk.name; } }
       p.docs = (p.docs || []).concat(doc);
       d = 'تحصيل ' + amt + ' من ' + c.client;
     } else if (t === 'pay.doc') { const p = P(b.id); p.docs = (p.docs || []).concat(doc); d = 'إضافة مستند لدفعة ' + C(p.c).client; }
-    else if (t === 'pay.uncollect') { need(u, 'edit'); const p = P(b.id); p.st = p.m === 'chq' ? 'safe' : 'wait'; ['cdate', 'cacc', 'rcpt', 'cby', 'cat', 'tr', 'bk'].forEach(k => delete p[k]); d = 'تراجع عن تحصيل ' + p.amt + ' · ' + C(p.c).client; }
+    else if (t === 'pay.uncollect') { need(u, 'edit'); const p = P(b.id); p.st = p.m === 'chq' ? 'safe' : 'wait'; ['cdate', 'cacc', 'rcpt', 'cby', 'cat', 'tr', 'bk', 'ap', 'cuid', 'aby', 'aat'].forEach(k => delete p[k]); d = 'تراجع عن تحصيل ' + p.amt + ' · ' + C(p.c).client; }
     else if (t === 'pay.status') { need(u, 'edit'); const p = P(b.id); if (p.st === 'done' || !['safe', 'wait', 'bounced'].includes(b.st)) bad('حالة غير صحيحة'); p.st = b.st; d = 'تغيير حالة دفعة ' + C(p.c).client + ' إلى ' + b.st; }
     else if (t === 'pay.save') {
       need(u, 'edit');
@@ -338,9 +353,12 @@ async function op(u, b) {
         const n = m.contracts.filter(x => projOf(x) === pj.id).reduce((a, x) => Math.max(a, parseInt(String(x.id).replace(/^.*cn/i, ''), 10) || 0), 0) + 1;
         c = { id: pre + 'cn' + String(n).padStart(4, '0'), proj: pj.id, st: 'active', ptok: rid(12) }; m.contracts.push(c);
       }
+      const isNew = !b.id;
       Object.assign(c, { client: str(b.client, 120), unit: str(b.unit, 60), phone: str(b.phone, 80), date: isDate(b.date) ? b.date : '', floor: str(b.floor, 30), sales: str(b.sales, 60), broker: str(b.broker, 60), note: str(b.note, 300), org: str(b.org, 30), value: +b.value || 0, maint: +b.maint || 0, elev: +b.elev || 0 }); clean(c); if (!c.elev) delete c.elev;
-      d = (b.id ? 'تعديل' : 'إضافة') + ' عقد ' + c.client;
-    } else if (t === 'con.cancel' || t === 'con.revive') { need(u, 'edit'); const c = C(b.id); if (t === 'con.cancel') { c.st = 'cancelled'; c.cancelDate = T; } else { c.st = 'active'; delete c.cancelDate; } d = (t === 'con.cancel' ? 'فسخ' : 'إعادة تفعيل') + ' عقد ' + c.client; }
+      if (isNew && pendSt(m)) Object.assign(c, { ap: 'p', cby: u.name, cuid: u.id, cat: at });
+      else if (!isNew && c.ap === 'r') { Object.assign(c, { ap: 'p', st: 'active' }); delete c.rnote; delete c.cancelDate; }
+      d = (b.id ? 'تعديل' : 'إضافة') + ' عقد ' + c.client + (c.ap === 'p' ? ' (منتظر الاعتماد)' : '');
+    } else if (t === 'con.cancel' || t === 'con.revive') { need(u, 'edit'); const c = C(b.id); if (t === 'con.cancel' && pendSt(m)) { if (c.pend) bad('فيه طلب فسخ منتظر الاعتماد بالفعل'); c.pend = { t: 'cancel', by: u.name, uid: u.id, at, note: str(b.note, 200) }; clean(c.pend); d = 'طلب فسخ عقد ' + c.client + ' (منتظر الاعتماد)'; } else if (t === 'con.cancel') { c.st = 'cancelled'; c.cancelDate = T; delete c.pend; } else { c.st = 'active'; delete c.cancelDate; } if (!d) d = (t === 'con.cancel' ? 'فسخ' : 'إعادة تفعيل') + ' عقد ' + c.client; }
     else if (t === 'fu.add') {
       need(u, 'contact'); const c = C(b.c);
       if (!str(b.result)) bad('نتيجة المتابعة مطلوبة');
@@ -451,13 +469,40 @@ async function op(u, b) {
       d = 'حذف حركة بنك ' + e.amt + ' · ' + e.desc;
     } else if (t === 'appr') {
       need(u, 'approve');
+      const own = (uid, by) => uid ? uid === u.id : by === u.name, OWN = 'مينفعش تعتمد حاجة إنت اللي سجلتها — لازم حد تاني يراجعها';
+      const note = str(b.note, 300); if (!b.ok && !note) bad('اكتب سبب الرفض');
+      if (b.src === 'pay') {
+        const p = P(b.id), c = C(p.c);
+        if (p.ap !== 'p') bad('التحصيل ده مش منتظر اعتماد');
+        if (own(p.cuid, p.cby)) bad(OWN, 403);
+        if (b.ok) { delete p.ap; Object.assign(p, { aby: u.name, aat: at }); d = 'اعتماد تحصيل ' + p.amt + ' · ' + c.client; }
+        else {
+          const who = p.cby; p.st = p.m === 'chq' ? 'safe' : 'wait';
+          ['cdate', 'cacc', 'rcpt', 'cby', 'cat', 'tr', 'bk', 'ap', 'cuid', 'aby', 'aat'].forEach(k => delete p[k]);
+          p.note = [p.note, 'تحصيل مرفوض من ' + u.name + ' (سجّله ' + who + '): ' + note].filter(Boolean).join(' · ').slice(0, 600);
+          d = 'رفض تحصيل ' + p.amt + ' · ' + c.client + ' · السبب: ' + note;
+        }
+      } else if (b.src === 'con') {
+        const c = C(b.id);
+        if (c.pend) {
+          if (own(c.pend.uid, c.pend.by)) bad(OWN, 403);
+          if (b.ok) { c.st = 'cancelled'; c.cancelDate = T; d = 'اعتماد فسخ عقد ' + c.client + ' (طلب ' + c.pend.by + ')'; }
+          else d = 'رفض طلب فسخ عقد ' + c.client + ' · السبب: ' + note;
+          delete c.pend;
+        } else if (c.ap === 'p') {
+          if (own(c.cuid, c.cby)) bad(OWN, 403);
+          if (b.ok) { delete c.ap; Object.assign(c, { aby: u.name, aat: at }); d = 'اعتماد عقد جديد ' + c.client; }
+          else { Object.assign(c, { ap: 'r', rnote: note, st: 'cancelled', cancelDate: T, aby: u.name, aat: at }); d = 'رفض عقد جديد ' + c.client + ' · السبب: ' + note; }
+        } else bad('العقد ده مش منتظر اعتماد');
+      } else {
       const list = b.src === 'bt' ? (m.bt || []) : (m.tr || []);
       const e = list.find(x => x.id === +b.id) || bad('القيد غير موجود', 404);
       if (e.st !== 'p' && !(e.st === 'r' && b.ok)) bad('القيد ده مش منتظر اعتماد');
       if (mine(e, u)) bad('مينفعش تعتمد قيد إنت اللي سجلته — لازم حد تاني يراجعه', 403);
       if (b.ok) { delete e.st; delete e.rnote; Object.assign(e, { aby: u.name, aat: at }); }
-      else { const note = str(b.note, 300); if (!note) bad('اكتب سبب الرفض'); Object.assign(e, { st: 'r', rnote: note, aby: u.name, aat: at }); }
+      else Object.assign(e, { st: 'r', rnote: note, aby: u.name, aat: at });
       d = (b.ok ? 'اعتماد ' : 'رفض ') + (b.src === 'bt' ? 'حركة بنك ' : 'قيد خزنة ') + e.amt + ' · ' + e.desc + (b.ok ? '' : ' · السبب: ' + str(b.note, 300));
+      }
     } else if (t === 'tr.conf') {
       if (u.role !== 'admin') bad('للأدمن فقط', 403);
       const open = Math.round(+b.open * 100) / 100;

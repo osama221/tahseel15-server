@@ -171,7 +171,7 @@ var RT={finish:'تشطيب الوحدة',handover:'استلام الوحدة',is
 var RS={new:'جديد',progress:'جاري التنفيذ',done:'تم',rejected:'مرفوض'};
 var FK={call:'اتصال',wa:'واتساب',visit:'زيارة'};
 var FR=['وعد بالسداد','لم يرد','طلب تأجيل','رفض السداد','مشكلة عند العميل','رقم خطأ','أخرى'];
-var PERM={viewAll:'يشوف كل العملاء والدفعات (من غيرها: المتأخرين فقط)',dashboard:'يشوف لوحة الأرقام الإجمالية',contact:'يتواصل مع العميل ويسجّل متابعة (يشوف أرقام التليفونات)',collect:'يسجّل تحصيل بصورة المستند',edit:'يعدّل ويضيف ويحذف عقود ودفعات',requests:'طلبات العملاء ولينكات العملاء',export:'تصدير Excel',approve:'يعتمد أو يرفض قيود الخزنة والبنوك اللي سجلها غيره',treasury:'الخزنة والبنوك: يسجّل قيود الوارد والمصروف والإيداع ويشوف الأرصدة وكشوف الحسابات والمصاريف'};
+var PERM={viewAll:'يشوف كل العملاء والدفعات (من غيرها: المتأخرين فقط)',dashboard:'يشوف لوحة الأرقام الإجمالية',contact:'يتواصل مع العميل ويسجّل متابعة (يشوف أرقام التليفونات)',collect:'يسجّل تحصيل بصورة المستند',edit:'يعدّل ويضيف ويحذف عقود ودفعات',requests:'طلبات العملاء ولينكات العملاء',export:'تصدير Excel',approve:'يعتمد أو يرفض اللي سجله غيره: التحصيلات، العقود الجديدة، فسخ العقود، وقيود الخزنة والبنوك',treasury:'الخزنة والبنوك: يسجّل قيود الوارد والمصروف والإيداع ويشوف الأرصدة وكشوف الحسابات والمصاريف'};
 var TODAY=todayISO(),CM={},PM={},PC={},DC=[],DP=[];
 function can(p){return D&&D.me&&(D.me.role==='admin'||!!(D.me.perms||{})[p])}
 function admin(){return D&&D.me&&D.me.role==='admin'}
@@ -270,9 +270,9 @@ function render(){
   who.innerHTML=esc(D.me.name)+'<br>'+(OFF?'<span class="off">غير متصل</span>':admin()?'أدمن':'');
   if(tabs().every(function(x){return x[0]!==TAB}))TAB=tabs()[0][0];
   var b=buckets(),nb=b.od.length+b.td.length,nr=(D.requests||[]).filter(function(q){return q.st==='new'}).length;
-  nav.innerHTML=tabs().map(function(x){var n=x[0]==='pay'?nb:x[0]==='req'?nr:x[0]==='tr'?nPend():0;return '<button class="'+(TAB===x[0]?'on':'')+'" onclick="go(\''+x[0]+'\')"><svg viewBox="0 0 24 24">'+ICON[x[0]]+'</svg>'+x[1]+(n?'<span class="dot">'+n+'</span>':'')+'</button>'}).join('');
+  nav.innerHTML=tabs().map(function(x){var n=x[0]==='pay'?nb:x[0]==='req'?nr:x[0]==='tr'&&can('treasury')?nPend():x[0]==='set'&&!can('treasury')?nPend():0;return '<button class="'+(TAB===x[0]?'on':'')+'" onclick="go(\''+x[0]+'\')"><svg viewBox="0 0 24 24">'+ICON[x[0]]+'</svg>'+x[1]+(n?'<span class="dot">'+n+'</span>':'')+'</button>'}).join('');
   if(admin()&&D.empty){main.innerHTML=vImport();return}
-  main.innerHTML=(TAB!=='set'?updBanner():'')+(TAB==='home'?vHome(b):TAB==='col'?vCol():TAB==='pay'?vPay(b):TAB==='con'?vCon():TAB==='req'?vReq():TAB==='tr'?vTr():vSet());
+  main.innerHTML=(TAB!=='set'?updBanner()+(TAB!=='tr'||TRV!=='a'?apprBanner():''):'')+(TAB==='home'?vHome(b):TAB==='col'?vCol():TAB==='pay'?vPay(b):TAB==='con'?vCon():TAB==='req'?vReq():TAB==='tr'?vTr():vSet());
 }
 
 /* ---------- login ---------- */
@@ -402,7 +402,7 @@ function trBal(mv,upto){return D.tr.conf.open+mv.reduce(function(a,x){return upt
 function setTR(k,v){window[k]=v;render()}
 function vTr(){
   if(!D.tr)return '<div class="empty">الخزنة غير متاحة</div>';
-  var np=nPend(),tb=[['j','الخزنة'],['b','البنوك'],['e','المصاريف']];if(can('approve')||pendList().some(function(x){return isMine(x.e)}))tb.push(['a','الاعتماد'+(np?' ('+np+')':'')]);
+  var np=nPend(),tb=[['j','الخزنة'],['b','البنوك'],['e','المصاريف']];if(can('approve')||apprItems().some(function(x){return x.own}))tb.push(['a','الاعتماد'+(np?' ('+np+')':'')]);
   var h='<div class="chips">'+tb.map(function(x){return '<button class="chip '+(TRV===x[0]?'on':'')+'" onclick="TRB=\'\';setTR(\'TRV\',\''+x[0]+'\')">'+x[1]+'</button>'}).join('')+'</div>';
   return h+(TRV==='a'?vAppr():TRV==='e'?vExp():TRV==='b'?vBanks():vJour());
 }
@@ -658,30 +658,53 @@ function updCard(){if(!window.Native)return '';var c=appV();
 /* ---------- approvals (maker-checker) ---------- */
 function okE(e){return !e.st}
 function isMine(e){return e.uid?e.uid===D.me.id:e.by===D.me.name}
+var SRCN={pay:'تحصيل عميل',con:'عقود',tr:'الخزنة',bt:'البنوك'};
+function apprItems(){return D.appr||[]}
+function nPend(){return can('approve')?apprItems().filter(function(x){return x.st==='p'&&!x.own}).length:0}
+function stTag(e){return e.st==='p'?'<span class="tag wait">منتظر الاعتماد</span>':e.st==='r'?'<span class="tag od">مرفوض</span>':''}
+function qid(id){return '\''+String(id).replace(/'/g,'')+'\''}
+function apOpen(x){return x.src==='pay'?'openP('+x.id+')':x.src==='con'?'openC('+qid(x.cid)+')':x.src==='bt'?'btOpen('+x.id+')':'trOpen('+x.id+')'}
+function apRow(x,btns){var d=x.date||'';
+  return '<div class="row" style="display:block"><div style="display:flex;gap:10px;cursor:pointer" onclick="'+apOpen(x)+'">'+(d?'<span class="d"><b class="num">'+(+d.slice(8,10))+'</b><span>'+MON[+d.slice(5,7)-1]+'</span></span>':'')
+   +'<span class="m" style="flex:1"><div class="n">'+esc(x.desc)+'</div><div class="u">'+esc(SRCN[x.src])+' · '+esc(x.lbl||'')+' · '+esc(x.by||'')+(x.st==='r'&&x.rnote?' · السبب: '+esc(x.rnote):'')+'</div></span>'
+   +'<span class="a"><b style="color:'+(x.in?'#1f9d55':'var(--red2)')+'">'+money(x.amt)+'</b>'+stTag(x)+'</span></div>'
+   +(btns?'<div class="btns" style="margin-top:8px"><button class="btn k sm" onclick="apprDo(\''+x.src+'\','+qid(x.id)+',true)">✓ اعتماد</button><button class="btn dng sm" onclick="apprRej(\''+x.src+'\','+qid(x.id)+')">✕ رفض</button></div>':'')+'</div>'}
+function vAppr(){var l=apprItems(),toDo=l.filter(function(x){return x.st==='p'&&!x.own&&can('approve')}),rej=l.filter(function(x){return x.st==='r'}),mineL=l.filter(function(x){return x.own&&x.st==='p'});
+  var h='';
+  if(D.tr&&!D.tr.conf.appr)h+='<div class="banner">الاعتماد متوقف حالياً — كل حاجة بتتسجل على طول. الأدمن يقدر يشغله من الخزنة ← «ضبط رصيد أول المدة».</div>';
+  if(can('approve')){
+    var g={};toDo.forEach(function(x){(g[x.src]=g[x.src]||[]).push(x)});
+    h+='<div class="gh"><span>منتظرة اعتمادك</span><span>'+toDo.length+'</span></div>';
+    if(!toDo.length)h+='<div class="empty">مفيش حاجة منتظرة اعتمادك</div>';
+    ['pay','con','tr','bt'].forEach(function(s){if(g[s])h+='<div class="sec">'+SRCN[s]+' · '+g[s].length+'</div><div class="list">'+g[s].map(function(x){return apRow(x,true)}).join('')+'</div>'});
+  }
+  if(rej.length)h+='<div class="gh"><span>مرفوضة</span><span>'+rej.length+'</span></div><div class="list">'+rej.map(function(x){return apRow(x,false)}).join('')+'</div>';
+  if(mineL.length)h+='<div class="gh"><span>سجلتها ومستنية حد تاني يعتمدها</span><span>'+mineL.length+'</span></div><div class="list">'+mineL.map(function(x){return apRow(x,false)}).join('')+'</div>';
+  if(!h)h='<div class="empty">مفيش حاجة منتظرة اعتماد</div>';
+  return h}
 function pendList(){var bm=bkM(),cc=trCC();
   return (D.tr.items||[]).filter(function(e){return e.st}).map(function(e){return {src:'tr',e:e,lbl:'الخزنة · '+(e.k==='exp'?(cc[e.cc]||{}).name||'مصروف':e.k==='dep'?'إيداع في '+((bm[e.bank]||{}).name||'بنك'):TRK[e.k])}})
-   .concat((D.tr.bt||[]).filter(function(e){return e.st}).map(function(e){return {src:'bt',e:e,lbl:((bm[e.bank]||{}).name||'بنك')+' · '+(e.k==='exp'?(cc[e.cc]||{}).name||'مصروف':BTK[e.k])}}))
-   .sort(function(a,b){return (a.e.at||'')<(b.e.at||'')?1:-1})}
-function nPend(){return can('approve')&&D.tr?pendList().filter(function(x){return x.e.st==='p'&&!isMine(x.e)}).length:0}
-function stTag(e){return e.st==='p'?'<span class="tag wait">منتظر الاعتماد</span>':e.st==='r'?'<span class="tag od">مرفوض</span>':''}
+   .concat((D.tr.bt||[]).filter(function(e){return e.st}).map(function(e){return {src:'bt',e:e,lbl:((bm[e.bank]||{}).name||'بنك')+' · '+(e.k==='exp'?(cc[e.cc]||{}).name||'مصروف':BTK[e.k])}}))}
 function pendRow(x){var e=x.e,inn=e.k==='in';
   return '<button class="row" onclick="'+(x.src==='bt'?'btOpen':'trOpen')+'('+e.id+')"><span class="d"><b class="num">'+(+e.date.slice(8,10))+'</b><span>'+MON[+e.date.slice(5,7)-1]+'</span></span><span class="m"><div class="n">'+esc(e.desc)+'</div><div class="u">'+esc(x.lbl)+' · '+esc(e.by)+(e.st==='r'&&e.rnote?' · السبب: '+esc(e.rnote):'')+'</div></span><span class="a"><b style="color:'+(inn?'#1f9d55':'var(--red2)')+'">'+(inn?'+':'−')+money(e.amt)+'</b>'+stTag(e)+'</span></button>'}
 function pendBlock(filter,title){var l=pendList().filter(filter);if(!l.length)return '';
   return '<div class="gh"><span>'+title+'</span><span>'+l.length+'</span></div><div class="note" style="margin-top:0">مش محسوبة في الرصيد لحد ما تتعتمد.</div><div class="list">'+l.map(pendRow).join('')+'</div>'}
-function vAppr(){var l=pendList(),mineL=l.filter(function(x){return isMine(x.e)}),toDo=l.filter(function(x){return x.e.st==='p'&&!isMine(x.e)}),rej=l.filter(function(x){return x.e.st==='r'&&!isMine(x.e)});
-  var h='';
-  if(!D.tr.conf.appr)h+='<div class="banner">الاعتماد متوقف حالياً — القيود بتتحسب على طول. الأدمن يقدر يشغله من «ضبط رصيد أول المدة».</div>';
-  h+='<div class="gh"><span>منتظرة اعتمادك</span><span>'+toDo.length+'</span></div>'+(toDo.length?'<div class="list">'+toDo.map(function(x){var e=x.e;return '<div class="row" style="display:block">'+pendRow(x).replace(/^<button class="row"/,'<div style="display:flex;gap:10px;cursor:pointer"').replace(/<\/button>$/,'</div>')
-     +'<div class="btns" style="margin-top:8px"><button class="btn k sm" onclick="apprDo(\''+x.src+'\','+e.id+',true)">✓ اعتماد</button><button class="btn dng sm" onclick="apprRej(\''+x.src+'\','+e.id+')">✕ رفض</button></div></div>'}).join('')+'</div>':'<div class="empty">مفيش قيود منتظرة اعتمادك</div>');
-  if(rej.length)h+='<div class="gh"><span>مرفوضة</span><span>'+rej.length+'</span></div><div class="list">'+rej.map(pendRow).join('')+'</div>';
-  if(mineL.length)h+='<div class="gh"><span>قيود سجلتها ومستنية حد تاني</span><span>'+mineL.length+'</span></div><div class="list">'+mineL.map(pendRow).join('')+'</div>';
-  return h}
-function apprDo(src,id,ok,note){op({t:'appr',src:src,id:id,ok:ok,note:note},ok?'تم الاعتماد':'تم الرفض').then(function(){closeAll();render()},function(){})}
-function apprRej(src,id){sheet('رفض القيد','<div class="card"><label class="f">سبب الرفض</label><textarea class="inp" id="rj_n" style="height:90px" placeholder="مثال: المبلغ مش مطابق للفاتورة"></textarea></div><div class="btns"><button class="btn dng" onclick="var n=V(\'rj_n\');if(!n){toast(\'اكتب السبب\');return}apprDo(\''+src+'\','+id+',false,n)">رفض</button></div>')}
+function apprSheet(){sheet('الاعتماد',function(){return vAppr()})}
+function apprBanner(){var n=nPend(),r=apprItems().filter(function(x){return x.own&&x.st==='r'}).length;
+  if(!n&&!r)return '';return '<div class="banner">'+(n?'فيه '+n+' عملية منتظرة اعتمادك':'')+(n&&r?' · ':'')+(r?r+' من اللي سجلتها اترفضت':'')+' <button onclick="apprSheet()">عرض</button></div>'}
+function apprDo(src,id,ok,note){op({t:'appr',src:src,id:id,ok:ok,note:note},ok?'تم الاعتماد':'تم الرفض').then(function(){if(STACK.length&&STACK[0].t==='الاعتماد'){STACK=[STACK[0]];drawSheets()}else closeAll();render()},function(){})}
+function apprRej(src,id){sheet('سبب الرفض','<div class="card"><label class="f">سبب الرفض</label><textarea class="inp" id="rj_n" style="height:90px" placeholder="مثال: المبلغ مش مطابق للمستند"></textarea>'+(src==='pay'?'<p class="note">رفض التحصيل بيرجّع الدفعة لحالتها قبل التحصيل، والسبب بيتكتب في ملاحظاتها.</p>':src==='con'?'<p class="note">رفض العقد الجديد بيوقفه، ورفض طلب الفسخ بيسيب العقد ساري.</p>':'')+'</div><div class="btns"><button class="btn dng" onclick="var n=V(\'rj_n\');if(!n){toast(\'اكتب السبب\');return}apprDo(\''+src+'\','+qid(id)+',false,n)">رفض</button></div>')}
 function apprBox(src,e){var h='';
-  if(e.st)h+='<div class="card cen">'+stTag(e)+(e.st==='r'?'<div class="note">رفضه '+esc(e.aby||'')+(e.aat?' · '+fdt(e.aat):'')+'<br>السبب: '+esc(e.rnote||'')+'</div>':'<div class="note">مش محسوب في الرصيد لحد ما يعتمده حد غير اللي سجّله</div>')+'</div>';
+  if(e.st)h+='<div class="card cen">'+stTag(e)+(e.st==='r'?'<div class="note">رفضه '+esc(e.aby||'')+(e.aat?' · '+fdt(e.aat):'')+'<br>السبب: '+esc(e.rnote||'')+'</div>':'<div class="note">مش محسوب لحد ما يعتمده حد غير اللي سجّله</div>')+'</div>';
   else if(e.aby)h+='<p class="note">اعتمده: '+esc(e.aby)+(e.aat?' · '+fdt(e.aat):'')+'</p>';
   if(e.st&&can('approve')&&!isMine(e))h+='<div class="btns"><button class="btn k sm" onclick="apprDo(\''+src+'\','+e.id+',true)">✓ اعتماد</button>'+(e.st==='p'?'<button class="btn dng sm" onclick="apprRej(\''+src+'\','+e.id+')">✕ رفض</button>':'')+'</div>';
+  return h}
+function apItem(src,id,kind){return apprItems().filter(function(x){return x.src===src&&String(x.id)===String(id)&&(!kind||x.kind===kind)})[0]}
+function payApprBox(p){var x=p.ap?apItem('pay',p.id):null;if(p.ap!=='p')return p.aby&&p.st==='done'?'<p class="note">اعتمد التحصيل: '+esc(p.aby)+(p.aat?' · '+fdt(p.aat):'')+'</p>':'';
+  return '<div class="card cen"><span class="tag wait">تحصيل منتظر الاعتماد</span><div class="note">مش محسوب في الخزنة / البنك لحد ما يتعتمد</div>'+(x&&!x.own&&can('approve')?'<div class="btns"><button class="btn k sm" onclick="apprDo(\'pay\','+p.id+',true)">✓ اعتماد التحصيل</button><button class="btn dng sm" onclick="apprRej(\'pay\','+p.id+')">✕ رفض</button></div>':'')+'</div>'}
+function conApprBox(c){var h='';
+  if(c.pend){var x=apItem('con',c.id,'cancel');h+='<div class="card cen"><span class="tag wait">طلب فسخ منتظر الاعتماد</span><div class="note">طلبه '+esc(c.pend.by)+(c.pend.at?' · '+fdt(c.pend.at):'')+(c.pend.note?'<br>'+esc(c.pend.note):'')+'</div>'+(x&&!x.own&&can('approve')?'<div class="btns"><button class="btn dng sm" onclick="apprDo(\'con\','+qid(c.id)+',true)">اعتماد الفسخ</button><button class="btn g sm" onclick="apprRej(\'con\','+qid(c.id)+')">رفض الطلب</button></div>':'')+'</div>'}
+  if(c.ap){var y=apItem('con',c.id);h+='<div class="card cen">'+(c.ap==='p'?'<span class="tag wait">عقد جديد منتظر الاعتماد</span>':'<span class="tag od">عقد مرفوض</span><div class="note">السبب: '+esc(c.rnote||'')+'<br>عدّل بيانات العقد واحفظ علشان يتبعت للاعتماد تاني</div>')+(c.ap==='p'&&y&&!y.own&&can('approve')?'<div class="btns"><button class="btn k sm" onclick="apprDo(\'con\','+qid(c.id)+',true)">✓ اعتماد العقد</button><button class="btn dng sm" onclick="apprRej(\'con\','+qid(c.id)+')">✕ رفض</button></div>':'')+'</div>'}
   return h}
 
 /* ---------- collections ---------- */
@@ -759,6 +782,7 @@ function pBody(id){
   var h='<div class="card cen"><div class="note" style="margin:0">'+TYPE[p.type]+' · '+esc(c.client)+'</div><div class="big">'+money(p.amt)+' <small style="font-size:14px;font-weight:600">ج.م</small></div><span class="tag '+p.st+'">'+STAT[p.st]+'</span> '+when+'</div>';
   if(pend&&act&&can('collect'))h+='<div class="btns"><button class="btn" onclick="collectForm('+id+')">✓ تم التحصيل</button></div>';
   if(pend&&act&&can('contact'))h+=contactBtns(c,p);
+  h+=payApprBox(p);
   h+='<div class="sec">البيانات</div><div class="card">'
    +kv('العميل','<a class="lnk" onclick="openC(\''+p.c+'\')">'+esc(c.client)+'</a>')+kv('الوحدة',esc(c.unit))+kv('المشروع',esc(pname(c.proj)))+kv('رقم العقد',esc(p.c)+(act?'':' <span class="tag cancelled">'+cst(c)+'</span>'))
    +kv('تاريخ الاستحقاق',fd(p.due))+kv('طريقة الدفع',METH[p.m])+kv('رقم الشيك',p.chq?'<span class="num">'+esc(p.chq)+'</span>':'')+kv('البنك',esc(p.bank))+kv('تاريخ الإيداع',p.dep?fd(p.dep):'')
@@ -797,7 +821,7 @@ function collect(id){
   if(!(amt>0)||amt>p.amt){toast('المبلغ غير صحيح');return}
   var to=V('c_to'),bk=(D.bks||[]).filter(function(b){return b.id===to})[0],acc=to==='cash'?'cash':bk?bk.name:V('c_acc');
   if(!to){toast('اختار التحصيل اتستلم في الخزنة ولا أنهي بنك');return}if(to==='other'&&!acc){toast('اكتب اسم الحساب');return}
-  op({t:'pay.collect',id:id,amt:amt,cdate:V('c_date')||TODAY,cacc:acc,rcpt:V('c_rc'),cash:to==='cash'?1:undefined,bank:bk?bk.id:undefined,photo:PHOTO},'تم تسجيل التحصيل').then(function(){PHOTO='';back();refresh()},function(){});
+  op({t:'pay.collect',id:id,amt:amt,cdate:V('c_date')||TODAY,cacc:acc,rcpt:V('c_rc'),cash:to==='cash'?1:undefined,bank:bk?bk.id:undefined,photo:PHOTO},D.apOn?'تم تسجيل التحصيل — منتظر اعتماد حد تاني':'تم تسجيل التحصيل').then(function(){PHOTO='';back();refresh()},function(){});
 }
 function docForm(id){sheet('إضافة مستند','<div class="card">'+photoBox()+'</div><div class="btns"><button class="btn" onclick="if(!PHOTO){toast(\'اختر الصورة أولاً\')}else op({t:\'pay.doc\',id:'+id+',photo:PHOTO},\'تم إرفاق المستند\').then(function(){back();refresh()},function(){})">حفظ</button></div>')}
 function uncollect(id){confirmBox('إرجاع الدفعة للمستحقات؟','تراجع',function(){op({t:'pay.uncollect',id:id},'رجعت الدفعة للمستحقات').then(refresh,function(){})})}
@@ -851,6 +875,7 @@ function cBody(id){
   if(can('requests')){var rq=(D.requests||[]).filter(function(q){return q.c===id}).sort(function(a,b){return a.at<b.at?1:-1});
     h+='<div class="sec">طلبات العميل · '+rq.length+'</div><div class="card">'+(rq.length?rq.map(reqItem).join(''):'<div class="note">لا توجد طلبات.</div>')
      +'<div class="btns"><button class="btn k sm" onclick="reqForm(\''+id+'\')">+ طلب جديد</button>'+(c.ptok?'<button class="btn g sm" onclick="shareLink(\''+id+'\')">لينك العميل</button>':'')+'</div></div>'}
+  h+=conApprBox(c);
   h+='<div class="sec">بيانات العقد</div><div class="card">'+kv('المشروع',esc(pname(c.proj)))+kv('رقم العقد',esc(c.id))+kv('جهة التعاقد',esc(c.org))+kv('قيمة الوحدة',money(c.value))+kv('وديعة الصيانة',money(c.maint))+kv('أسانسير',c.elev?money(c.elev):'')+kv('تاريخ التعاقد',c.date?fd(c.date):'')+kv('الدور',esc(c.floor))+kv('المساحة',c.area?esc(c.area)+' م²'+(c.garden?' + جاردن '+esc(c.garden)+' م²':''):'')
    +kv('التليفون',c.phone?'<span class="num">'+esc(c.phone)+'</span>':'')+kv('السيلز',esc(c.sales))+kv('البروكر',esc(c.broker))+kv('ملاحظات',esc(c.note))
    +(all&&c.st==='active'&&Math.abs(gap)>=1?kv(gap>0?'غير مجدول في الدفعات':'زيادة في الدفعات عن العقد','<span style="color:var(--red2)">'+money(Math.abs(gap))+'</span>'):'')+'</div>';
@@ -858,7 +883,7 @@ function cBody(id){
   if(can('edit'))h+='<div class="btns"><button class="btn k sm" onclick="editP(0,\''+id+'\')">+ إضافة دفعة</button><button class="btn g sm" onclick="editC(\''+id+'\')">تعديل العقد</button></div><div class="btns">'+(c.st==='active'?'<button class="btn dng sm" onclick="cancelC(\''+id+'\')">فسخ العقد</button>':'<button class="btn g sm" onclick="op({t:\'con.revive\',id:\''+id+'\'},\'تم تفعيل العقد\').then(refresh,function(){})">إعادة تفعيل العقد</button>')+'</div>';
   return h;
 }
-function cancelC(id){confirmBox('تسجيل العقد كمفسوخ؟ دفعاته القادمة لن تظهر في المستحقات ولا الإشعارات.','فسخ',function(){op({t:'con.cancel',id:id},'تم تسجيل الفسخ').then(refresh,function(){})})}
+function cancelC(id){confirmBox(D.apOn?'إرسال طلب فسخ العقد للاعتماد؟ العقد هيفضل ساري لحد ما حد تاني يعتمد الفسخ.':'تسجيل العقد كمفسوخ؟ دفعاته القادمة لن تظهر في المستحقات ولا الإشعارات.',D.apOn?'إرسال الطلب':'فسخ',function(){op({t:'con.cancel',id:id},D.apOn?'تم إرسال طلب الفسخ للاعتماد':'تم تسجيل الفسخ').then(refresh,function(){})})}
 function editC(id){
   var c=id?CM[id]:{};
   function i(l,k,t,ph){return '<label class="f">'+l+'</label><input class="inp" id="k_'+k+'" '+(t==='n'?'type="number" inputmode="decimal"':t==='d'?'type="date"':t==='t'?'inputmode="tel"':'')+' value="'+esc(c[k]==null?'':c[k])+'" placeholder="'+(ph||'')+'">'}
